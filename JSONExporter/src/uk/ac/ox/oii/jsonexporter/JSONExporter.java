@@ -1,6 +1,19 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+Copyright (C) 2012  Scott A. Hale
+Website: http://www.scotthale.net/
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/license
  */
 package uk.ac.ox.oii.jsonexporter;
 
@@ -57,7 +70,7 @@ public class JSONExporter implements GraphExporter, LongTask, CharacterExporter 
                 //Count the number of tasks (nodes + edges) and start the progress
                 int tasks = graph.getNodeCount() + graph.getEdgeCount();
                 Progress.start(progress, tasks);
-                
+
                 //FileWriter fwriter = new  FileWriter(writer);
                 writer.write("{\"nodes\":[");
 
@@ -65,9 +78,9 @@ public class JSONExporter implements GraphExporter, LongTask, CharacterExporter 
                 //EdgeIterable eIt = graph.getEdges();
                 //Export nodes. Progress is incremented at each step.
                 Node[] nodeArray = graph.getNodes().toArray();
-                for (int i=0; i<nodeArray.length; i++) {
-                //NodeIterator nIt = graph.getNodes().iterator();
-                //while (nIt.hasNext()) {
+                for (int i = 0; i < nodeArray.length; i++) {
+                    //NodeIterator nIt = graph.getNodes().iterator();
+                    //while (nIt.hasNext()) {
                     Node n = nodeArray[i];//nIt.next();
                     NodeData nd = n.getNodeData();
                     String id = nd.getId();
@@ -75,37 +88,45 @@ public class JSONExporter implements GraphExporter, LongTask, CharacterExporter 
                     float x = nd.x();
                     float y = nd.y();
                     float size = nd.getSize();
-                    String color = "rgb(" + (int)(nd.r()*255) + "," + (int)(nd.g()*255) + "," + (int)(nd.b()*255) + ")";
-                    
+                    String color = "rgb(" + (int) (nd.r() * 255) + "," + (int) (nd.g() * 255) + "," + (int) (nd.b() * 255) + ")";
+
                     StringBuilder sb = new StringBuilder();
-                    if (i!=0) sb.append(",\n");//No comma after last one (nor before first one)
+                    if (i != 0) {
+                        sb.append(",\n");//No comma after last one (nor before first one)
+                    }
                     sb.append("{\"id\":\"" + id + "\", \"label\":\"" + label + "\",");
                     sb.append("\"x\":" + x + ",\"y\":" + y + ",");
                     sb.append("\"size\":" + size + ",\"color\":\"" + color + "\",\"attributes\":{");
 
-                    
+
                     //Map<String,String> attr = new  HashMap<String,String>();
                     AttributeRow nAttr = (AttributeRow) nd.getAttributes();
-                    boolean first=true;
-                    for (int j=0; j< nAttr.countValues(); j++) {
+                    boolean first = true;
+                    for (int j = 0; j < nAttr.countValues(); j++) {
                         Object valObj = nAttr.getValue(j);
-                        if (valObj==null) continue;
+                        if (valObj == null) {
+                            continue;
+                        }
                         String val = valObj.toString();
                         AttributeColumn col = nAttr.getColumnAt(j);
-                        if (col==null) continue;
+                        if (col == null) {
+                            continue;
+                        }
                         String name = col.getTitle();
-                        if (name.equalsIgnoreCase("Id") || name.equalsIgnoreCase("Label") ||
-                                  name.equalsIgnoreCase("uid")) continue;
-                       // attr.put(name,val);
+                        if (name.equalsIgnoreCase("Id") || name.equalsIgnoreCase("Label")
+                                || name.equalsIgnoreCase("uid")) {
+                            continue;
+                        }
+                        // attr.put(name,val);
                         if (first) {
-                           first=false;
+                            first = false;
                         } else {
                             sb.append(",");
                         }
                         sb.append("\"" + name + "\":\"" + val + "\"");
                     }
                     sb.append("}}");
-                    
+
                     writer.write(sb.toString());
                     if (cancel) {
                         return false;
@@ -116,16 +137,18 @@ public class JSONExporter implements GraphExporter, LongTask, CharacterExporter 
 
                 //Export edges. Progress is incremented at each step.
                 Edge[] edgeArray = graph.getEdges().toArray();
-                for (int i=0; i<edgeArray.length; i++) {
-                //EdgeIterator eIt = graph.getEdges().iterator();
-                //while (eIt.hasNext()) {
+                for (int i = 0; i < edgeArray.length; i++) {
+                    //EdgeIterator eIt = graph.getEdges().iterator();
+                    //while (eIt.hasNext()) {
                     Edge e = edgeArray[i];//eIt.next();
                     String sourceId = e.getSource().getNodeData().getId();
                     String targetId = e.getTarget().getNodeData().getId();
                     String weight = String.valueOf(e.getWeight());
                     //e.getEdgeData().r();gb of edge data
                     //Write to file
-                    if (i!=0)   writer.write(",\n");//No comma after last one
+                    if (i != 0) {
+                        writer.write(",\n");//No comma after last one
+                    }
                     writer.write("{\"source\":\"" + sourceId + "\",\"target\":\"" + targetId + "\"");
                     writer.write(",\"weight\":\"" + weight + "\"");
                     writer.write(",\"id\":\"" + e.getId() + "\"}");
@@ -147,12 +170,12 @@ public class JSONExporter implements GraphExporter, LongTask, CharacterExporter 
             throw new RuntimeException(e);
         } finally {
             /*try {
-                /if (writer != null) {
-                    writer.close();
-                }
+            /if (writer != null) {
+            writer.close();
+            }
             } catch (java.io.IOException e) {
-                // failed to close file
-                System.err.println(e);
+            // failed to close file
+            System.err.println(e);
             }*/
         }
     }
