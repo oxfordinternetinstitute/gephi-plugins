@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+OpenIDE-Module: uk.ac.ox.oii.jsonexporter
+OpenIDE-Module-Localizing-Bundle: uk/ac/ox/oii/jsonexporter/Bundle.properties
+OpenIDE-Module-Specification-Version: 1.0
+
