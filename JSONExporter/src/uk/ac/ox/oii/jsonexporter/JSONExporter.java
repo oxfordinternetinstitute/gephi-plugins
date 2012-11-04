@@ -75,17 +75,18 @@ public class JSONExporter implements GraphExporter, LongTask, CharacterExporter 
                     float x = nd.x();
                     float y = nd.y();
                     float size = nd.getSize();
-                    String color = "rgb(" + nd.r() + "," + nd.g() + "," + nd.b() + ")";
+                    String color = "rgb(" + (int)(nd.r()*255) + "," + (int)(nd.g()*255) + "," + (int)(nd.b()*255) + ")";
                     
                     StringBuilder sb = new StringBuilder();
                     if (i!=0) sb.append(",\n");//No comma after last one (nor before first one)
-                    sb.append("{\"" + id + "\":\"" + label + "\",");
+                    sb.append("{\"id\":\"" + id + "\", \"label\":\"" + label + "\",");
                     sb.append("\"x\":" + x + ",\"y\":" + y + ",");
                     sb.append("\"size\":" + size + ",\"color\":\"" + color + "\",\"attributes\":{");
 
                     
                     //Map<String,String> attr = new  HashMap<String,String>();
                     AttributeRow nAttr = (AttributeRow) nd.getAttributes();
+                    boolean first=true;
                     for (int j=0; j< nAttr.countValues(); j++) {
                         Object valObj = nAttr.getValue(j);
                         if (valObj==null) continue;
@@ -93,8 +94,14 @@ public class JSONExporter implements GraphExporter, LongTask, CharacterExporter 
                         AttributeColumn col = nAttr.getColumnAt(j);
                         if (col==null) continue;
                         String name = col.getTitle();
+                        if (name.equalsIgnoreCase("Id") || name.equalsIgnoreCase("Label") ||
+                                  name.equalsIgnoreCase("uid")) continue;
                        // attr.put(name,val);
-                        if (j!=0) sb.append(",");
+                        if (first) {
+                           first=false;
+                        } else {
+                            sb.append(",");
+                        }
                         sb.append("\"" + name + "\":\"" + val + "\"");
                     }
                     sb.append("}}");
@@ -120,7 +127,8 @@ public class JSONExporter implements GraphExporter, LongTask, CharacterExporter 
                     //Write to file
                     if (i!=0)   writer.write(",\n");//No comma after last one
                     writer.write("{\"source\":\"" + sourceId + "\",\"target\":\"" + targetId + "\"");
-                    writer.write(",\"weight\":\"" + weight + "\"}");
+                    writer.write(",\"weight\":\"" + weight + "\"");
+                    writer.write(",\"id\":\"" + e.getId() + "\"}");
                     if (cancel) {
                         return false;
                     }
