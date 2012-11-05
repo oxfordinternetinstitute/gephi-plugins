@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+OpenIDE-Module: uk.ac.ox.oii.sigmaexporter
+OpenIDE-Module-Localizing-Bundle: uk/ac/ox/oii/sigmaexporter/Bundle.properties
+OpenIDE-Module-Specification-Version: 1.0
+
