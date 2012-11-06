@@ -162,7 +162,7 @@ public class ConfigFile implements Serializable{
         
         String img = props.get("informationPanel.imageAttribute",null);
         if (img==null || img.indexOf("None")!=-1) informationPanel.put("imageAttribute",false);
-        else features.put("imageAttribute",img);   
+        else informationPanel.put("imageAttribute",img);   
         
         informationPanel.put("groupByEdgeDirection",Boolean.valueOf(props.get("informationPanel.groupByEdgeDirection","false")));
         
