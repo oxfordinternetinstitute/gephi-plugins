@@ -78,8 +78,6 @@ public class SigmaExporter implements Exporter, LongTask {
                 //ZipHandler.extratZip(num2, path.getAbsolutePath().toString()+"/");
                 //URI uri = URI.create(path+"/zip.zip");// + skeleton.getPath());//.substring(skeleton.getPath().indexOf("!") + 1));
                // System.out.println(uri.toString());
-                Map<String, String> env = new HashMap<String, String>();
-                env.put("create", "true");
 
 
 
@@ -131,8 +129,8 @@ public class SigmaExporter implements Exporter, LongTask {
                 props.put("type", "network");
                 props.put("data", "data.json");
                 props.put("version", "1.0");
-
-                for (String key : props.keySet()) {
+                Object[] keys = props.keySet().toArray();
+                for (Object key : keys) {
                     String val = props.get(key);
                     /*if (val.equalsIgnoreCase("true") || val.equalsIgnoreCase("false")) {
                      boolean b = Boolean.valueOf(val);
