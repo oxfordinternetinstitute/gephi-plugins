@@ -5,6 +5,15 @@
 package uk.ac.ox.oii.sigmaexporter;
 
 import java.io.*;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.zip.*;
 
@@ -14,7 +23,7 @@ import java.util.zip.*;
  */
 public class ZipHandler {
 
-    public static final void copyInputStream(InputStream in, OutputStream out)
+    /*public static final void copyInputStream(InputStream in, OutputStream out)
             throws IOException {
         byte[] buffer = new byte[1024];
         int len;
@@ -53,7 +62,7 @@ public class ZipHandler {
             ioe.printStackTrace();
             return;
         }
-    }
+    }*/
 
     public static void extractZip(InputStream input, String dest) throws Exception {
         byte[] buf = new byte[1024];
@@ -64,7 +73,10 @@ public class ZipHandler {
             String entryName = zentry.getName();
             System.out.println("Name of  Zip Entry : " + entryName);
             if (zentry.isDirectory()) {
-                new File(dest + entryName).mkdirs();
+                File f = new File(dest + "/" + entryName);
+                f.mkdirs();
+                System.out.println("Create directory " + f.toString());
+                zentry = zinstream.getNextEntry();
                 continue;
             }
             FileOutputStream outstream = new FileOutputStream(dest + "/" + entryName);
@@ -83,4 +95,41 @@ public class ZipHandler {
         }
         zinstream.close();
     }
+    
+    
+    /*JDK7 / NIO Way
+     * //walk the zip file tree and copy files to the destination
+                try {
+                    //FileSystem zipFileSystem = FileSystems.newFileSystem(uri, env);
+                    FileSystem zipFileSystem = FileSystems.newFileSystem(zipPath, null);
+                    final Path root = zipFileSystem.getPath("/");
+
+                    Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
+                        @Override
+                        public FileVisitResult visitFile(Path file,
+                                BasicFileAttributes attrs) throws IOException {
+                            final Path destFile = Paths.get(path.toString(),
+                                    file.toString());
+                            System.out.printf("Extracting file %s to %s\n", file, destFile);
+                            Files.copy(file, destFile, StandardCopyOption.REPLACE_EXISTING);
+                            return FileVisitResult.CONTINUE;
+                        }
+
+                        @Override
+                        public FileVisitResult preVisitDirectory(Path dir,
+                                BasicFileAttributes attrs) throws IOException {
+                            final Path dirToCreate = Paths.get(path.toString(),
+                                    dir.toString());
+                            if (Files.notExists(dirToCreate)) {
+                                System.out.printf("Creating directory %s\n", dirToCreate);
+                                Files.createDirectory(dirToCreate);
+                            }
+                            return FileVisitResult.CONTINUE;
+                        }
+                    });
+                    zipPath.toFile().delete();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+     */
 }

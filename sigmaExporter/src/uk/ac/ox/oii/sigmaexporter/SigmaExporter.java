@@ -50,10 +50,12 @@ import org.gephi.project.api.Workspace;
 import org.gephi.utils.longtask.spi.LongTask;
 import org.gephi.utils.progress.Progress;
 import org.gephi.utils.progress.ProgressTicket;
+import uk.ac.ox.oii.sigmaexporter.model.ConfigFile;
 
 public class SigmaExporter implements Exporter, LongTask {
 
-    private HashMap<String, String> props;
+    private ConfigFile config;
+    private String path;
     private Workspace workspace;
     private ProgressTicket progress;
     private boolean cancel = false;
@@ -61,230 +63,184 @@ public class SigmaExporter implements Exporter, LongTask {
     @Override
     public boolean execute() {
         try {
-            if (props != null && (new File(props.get("path"))).getParentFile().exists()) {
-                final File path = new File(props.get("path"));
-                props.remove("path");//Don't need anymore
+            final File pathFile = new File(path);
+            if (pathFile.getParentFile().exists()) {
+                
                 FileWriter writer = null;
 
-                //Copy skeleton template
-                //URL skeleton = SigmaExporter.class.getClassLoader().getResource("resources/network.zip");//index.html
-                //URL num2 = SigmaExporter.class.getResource("resources/network/index.html");//uk/ac/ox/oii/sigmaexporter/resources/network/index.html
-                //URL skeleton = SigmaExporter.class.getResource("resources/network.zip");//index.html
-                InputStream num2 = SigmaExporter.class.getResourceAsStream("resources/network.zip"); //uk/ac/ox/oii/sigmaexporter/resources/network/index.html
-                // com.google.common.io.Files.copy(new File(skeleton.getFile()), path);//Hope to use NIO from JDK7 soon! Does Gephi require this yet?
-                Path zip = Paths.get(path.getAbsolutePath()+"/zip.zip");
-                Files.copy(num2,zip);
-                
-                //ZipHandler.extratZip(num2, path.getAbsolutePath().toString()+"/");
-                //URI uri = URI.create(path+"/zip.zip");// + skeleton.getPath());//.substring(skeleton.getPath().indexOf("!") + 1));
-               // System.out.println(uri.toString());
-
-
-
-
-                //walk the zip file tree and copy files to the destination
+                //Copy resource template
                 try {
-                    //FileSystem zipFileSystem = FileSystems.newFileSystem(uri, env);
-                    FileSystem zipFileSystem = FileSystems.newFileSystem(zip, null);
-                    final Path root = zipFileSystem.getPath("/");
+                    InputStream zipStream = SigmaExporter.class.getResourceAsStream("resources/network.zip"); //uk/ac/ox/oii/sigmaexporter/resources/network/index.html
 
-                    Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
-                        @Override
-                        public FileVisitResult visitFile(Path file,
-                                BasicFileAttributes attrs) throws IOException {
-                            final Path destFile = Paths.get(path.toString(),
-                                    file.toString());
-                            System.out.printf("Extracting file %s to %s\n", file, destFile);
-                            Files.copy(file, destFile, StandardCopyOption.REPLACE_EXISTING);
-                            return FileVisitResult.CONTINUE;
-                        }
+                    //Path zipPath = Paths.get(path.getAbsolutePath()+"/network.zip");
+                    //Files.copy(zipStream,zipPath);//NIO / JDK 7 Only
 
-                        @Override
-                        public FileVisitResult preVisitDirectory(Path dir,
-                                BasicFileAttributes attrs) throws IOException {
-                            final Path dirToCreate = Paths.get(path.toString(),
-                                    dir.toString());
-                            if (Files.notExists(dirToCreate)) {
-                                System.out.printf("Creating directory %s\n", dirToCreate);
-                                Files.createDirectory(dirToCreate);
-                            }
-                            return FileVisitResult.CONTINUE;
-                        }
-                    });
-                    zip.toFile().delete();
+                    ZipHandler.extractZip(zipStream, pathFile.getAbsolutePath());
                 } catch (Exception e) {
                     e.printStackTrace();
-                }
-            /*Files.copy(
-             ,
-             Paths.get(path.getAbsolutePath())
-             );*/
-
-            //Write config.json
-            try {
-                writer = new FileWriter(path.getAbsolutePath() + "/network/config.json");
-                //StringBuffer sb = new StringBuffer();
-                //sb.append("{\"type\":\"network\",\"data\":\"data.json\",\"version\":\"1.0\"");
-
-                props.put("type", "network");
-                props.put("data", "data.json");
-                props.put("version", "1.0");
-                Object[] keys = props.keySet().toArray();
-                for (Object key : keys) {
-                    String val = props.get(key);
-                    /*if (val.equalsIgnoreCase("true") || val.equalsIgnoreCase("false")) {
-                     boolean b = Boolean.valueOf(val);
-                     }*/
-                    if (val != null && val.length() >= 4 && val.substring(0, 4).equals("None")) {
-                        props.remove(key);
-                    }
+                    throw new RuntimeException(e);
                 }
 
-                Gson gson = new Gson();
-                gson.toJson(props, writer);
 
 
-            } catch (Exception e) {
-                e.printStackTrace();
-                new RuntimeException(e);
-            } finally {
-                if (writer != null) {
-                    writer.close();
-                    writer = null;
-                }
-            }
+                //Write config.json
+                try {
+                    writer = new FileWriter(pathFile.getAbsolutePath() + "/network/config.json");
+                    //StringBuffer sb = new StringBuffer();
+                    //sb.append("{\"type\":\"network\",\"data\":\"data.json\",\"version\":\"1.0\"");
 
-
-            //Write data.json
-            try {
-                writer = new FileWriter(path.getAbsolutePath() + "/network/data.json");
-                GraphModel graphModel = workspace.getLookup().lookup(GraphModel.class);
-                Graph graph = null;
-                graph = graphModel.getGraphVisible();
-
-                //Count the number of tasks (nodes + edges) and start the progress
-                int tasks = graph.getNodeCount() + graph.getEdgeCount();
-                Progress.start(progress, tasks);
-
-                //FileWriter fwriter = new  FileWriter(writer);
-                writer.write("{\"nodes\":[");
-
-
-                //EdgeIterable eIt = graph.getEdges();
-                //Export nodes. Progress is incremented at each step.
-                Node[] nodeArray = graph.getNodes().toArray();
-                for (int i = 0; i < nodeArray.length; i++) {
-                    //NodeIterator nIt = graph.getNodes().iterator();
-                    //while (nIt.hasNext()) {
-                    Node n = nodeArray[i];//nIt.next();
-                    NodeData nd = n.getNodeData();
-                    String id = nd.getId();
-                    String label = nd.getLabel();
-                    float x = nd.x();
-                    float y = nd.y();
-                    float size = nd.getSize();
-                    String color = "rgb(" + (int) (nd.r() * 255) + "," + (int) (nd.g() * 255) + "," + (int) (nd.b() * 255) + ")";
-
-                    StringBuilder sb = new StringBuilder();
-                    if (i != 0) {
-                        sb.append(",\n");//No comma after last one (nor before first one)
-                    }
-                    sb.append("{\"id\":\"" + id + "\", \"label\":\"" + label + "\",");
-                    sb.append("\"x\":" + x + ",\"y\":" + y + ",");
-                    sb.append("\"size\":" + size + ",\"color\":\"" + color + "\",\"attributes\":{");
-
-
-                    //Map<String,String> attr = new  HashMap<String,String>();
-                    AttributeRow nAttr = (AttributeRow) nd.getAttributes();
-                    boolean first = true;
-                    for (int j = 0; j < nAttr.countValues(); j++) {
-                        Object valObj = nAttr.getValue(j);
-                        if (valObj == null) {
-                            continue;
+                    /*props.put("type", "network");
+                    props.put("data", "data.json");
+                    props.put("version", "1.0");
+                    Object[] keys = props.keySet().toArray();
+                    for (Object key : keys) {
+                        String val = props.get(key);
+                        /*if (val.equalsIgnoreCase("true") || val.equalsIgnoreCase("false")) {
+                         boolean b = Boolean.valueOf(val);
+                         }*/
+                        /*if (val != null && val.length() >= 4 && val.substring(0, 4).equals("None")) {
+                            props.remove(key);
                         }
-                        String val = valObj.toString();
-                        AttributeColumn col = nAttr.getColumnAt(j);
-                        if (col == null) {
-                            continue;
-                        }
-                        String name = col.getTitle();
-                        if (name.equalsIgnoreCase("Id") || name.equalsIgnoreCase("Label")
-                                || name.equalsIgnoreCase("uid")) {
-                            continue;
-                        }
-                        // attr.put(name,val);
-                        if (first) {
-                            first = false;
-                        } else {
-                            sb.append(",");
-                        }
-                        sb.append("\"" + name + "\":\"" + val + "\"");
-                    }
-                    sb.append("}}");
+                    }*/
 
-                    writer.write(sb.toString());
-                    if (cancel) {
-                        return false;
+                    Gson gson = new Gson();
+                    gson.toJson(config, writer);
+
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    new RuntimeException(e);
+                } finally {
+                    if (writer != null) {
+                        writer.close();
+                        writer = null;
                     }
-                    Progress.progress(progress);
                 }
-                writer.write("],\"edges\":[");
 
-                //Export edges. Progress is incremented at each step.
-                Edge[] edgeArray = graph.getEdges().toArray();
-                for (int i = 0; i < edgeArray.length; i++) {
-                    //EdgeIterator eIt = graph.getEdges().iterator();
-                    //while (eIt.hasNext()) {
-                    Edge e = edgeArray[i];//eIt.next();
-                    String sourceId = e.getSource().getNodeData().getId();
-                    String targetId = e.getTarget().getNodeData().getId();
-                    String weight = String.valueOf(e.getWeight());
-                    //e.getEdgeData().r();gb of edge data
-                    //Write to file
-                    if (i != 0) {
-                        writer.write(",\n");//No comma after last one
+
+                //Write data.json
+                try {
+                    writer = new FileWriter(pathFile.getAbsolutePath() + "/network/data.json");
+                    GraphModel graphModel = workspace.getLookup().lookup(GraphModel.class);
+                    Graph graph = null;
+                    graph = graphModel.getGraphVisible();
+
+                    //Count the number of tasks (nodes + edges) and start the progress
+                    int tasks = graph.getNodeCount() + graph.getEdgeCount();
+                    Progress.start(progress, tasks);
+
+                    //FileWriter fwriter = new  FileWriter(writer);
+                    writer.write("{\"nodes\":[");
+
+
+                    //EdgeIterable eIt = graph.getEdges();
+                    //Export nodes. Progress is incremented at each step.
+                    Node[] nodeArray = graph.getNodes().toArray();
+                    for (int i = 0; i < nodeArray.length; i++) {
+                        //NodeIterator nIt = graph.getNodes().iterator();
+                        //while (nIt.hasNext()) {
+                        Node n = nodeArray[i];//nIt.next();
+                        NodeData nd = n.getNodeData();
+                        String id = nd.getId();
+                        String label = nd.getLabel();
+                        float x = nd.x();
+                        float y = nd.y();
+                        float size = nd.getSize();
+                        String color = "rgb(" + (int) (nd.r() * 255) + "," + (int) (nd.g() * 255) + "," + (int) (nd.b() * 255) + ")";
+
+                        StringBuilder sb = new StringBuilder();
+                        if (i != 0) {
+                            sb.append(",\n");//No comma after last one (nor before first one)
+                        }
+                        sb.append("{\"id\":\"" + id + "\", \"label\":\"" + label + "\",");
+                        sb.append("\"x\":" + x + ",\"y\":" + y + ",");
+                        sb.append("\"size\":" + size + ",\"color\":\"" + color + "\",\"attributes\":{");
+
+
+                        //Map<String,String> attr = new  HashMap<String,String>();
+                        AttributeRow nAttr = (AttributeRow) nd.getAttributes();
+                        boolean first = true;
+                        for (int j = 0; j < nAttr.countValues(); j++) {
+                            Object valObj = nAttr.getValue(j);
+                            if (valObj == null) {
+                                continue;
+                            }
+                            String val = valObj.toString();
+                            AttributeColumn col = nAttr.getColumnAt(j);
+                            if (col == null) {
+                                continue;
+                            }
+                            String name = col.getTitle();
+                            if (name.equalsIgnoreCase("Id") || name.equalsIgnoreCase("Label")
+                                    || name.equalsIgnoreCase("uid")) {
+                                continue;
+                            }
+                            // attr.put(name,val);
+                            if (first) {
+                                first = false;
+                            } else {
+                                sb.append(",");
+                            }
+                            sb.append("\"" + name + "\":\"" + val + "\"");
+                        }
+                        sb.append("}}");
+
+                        writer.write(sb.toString());
+                        if (cancel) {
+                            return false;
+                        }
+                        Progress.progress(progress);
                     }
-                    writer.write("{\"source\":\"" + sourceId + "\",\"target\":\"" + targetId + "\"");
-                    writer.write(",\"weight\":\"" + weight + "\"");
-                    writer.write(",\"id\":\"" + e.getId() + "\"}");
-                    if (cancel) {
-                        return false;
+                    writer.write("],\"edges\":[");
+
+                    //Export edges. Progress is incremented at each step.
+                    Edge[] edgeArray = graph.getEdges().toArray();
+                    for (int i = 0; i < edgeArray.length; i++) {
+                        //EdgeIterator eIt = graph.getEdges().iterator();
+                        //while (eIt.hasNext()) {
+                        Edge e = edgeArray[i];//eIt.next();
+                        String sourceId = e.getSource().getNodeData().getId();
+                        String targetId = e.getTarget().getNodeData().getId();
+                        String weight = String.valueOf(e.getWeight());
+                        //e.getEdgeData().r();gb of edge data
+                        //Write to file
+                        if (i != 0) {
+                            writer.write(",\n");//No comma after last one
+                        }
+                        writer.write("{\"source\":\"" + sourceId + "\",\"target\":\"" + targetId + "\"");
+                        writer.write(",\"weight\":\"" + weight + "\"");
+                        writer.write(",\"id\":\"" + e.getId() + "\"}");
+                        if (cancel) {
+                            return false;
+                        }
+                        Progress.progress(progress);
                     }
-                    Progress.progress(progress);
+                    writer.write("]}");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    new RuntimeException(e);
+                } finally {
+                    if (writer != null) {
+                        writer.close();
+                        writer = null;
+                    }
                 }
-                writer.write("]}");
-            } catch (Exception e) {
-                e.printStackTrace();
-                new RuntimeException(e);
-            } finally {
-                if (writer != null) {
-                    writer.close();
-                    writer = null;
-                }
-            }
 
 
-            //Finish progress
-            Progress.finish(progress);
-            return true;
-        } 
-
-    
-    
-
-    
-        else {
+                //Finish progress
+                Progress.finish(progress);
+                return true;
+            } else {
                 throw new Exception("Invalid or null settings.");
-    }
-}
-catch (Exception e) {
+            }
+        } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
 
-    public HashMap<String, String> getProperties() {
-        return props;
+    public ConfigFile getConfigFile() {
+        return config;
     }
 
     public List<String> getNodeAttributes() {
@@ -293,45 +249,38 @@ catch (Exception e) {
         //GraphController graphController = Lookup.getDefault().lookup(GraphController.class);
         //GraphModel graphModel = graphController.getModel(workspace);
         //Graph graph = graphModel.getGraphVisible();
-        GraphModel 
-
-
-
-graphModel = workspace.getLookup().lookup(GraphModel.class  
-
-    );
+        GraphModel graphModel = workspace.getLookup().lookup(GraphModel.class);
         Graph graph = graphModel.getGraphVisible();
-    AttributeRow ar = (AttributeRow) (graph.getNodes().toArray()[0].getNodeData().getAttributes());
-    for (AttributeValue av
-
-    : ar.getValues () 
-        ) {
+        AttributeRow ar = (AttributeRow) (graph.getNodes().toArray()[0].getNodeData().getAttributes());
+        for (AttributeValue av : ar.getValues()) {
             attr.add(av.getColumn().getTitle());
+        }
+        return attr;
     }
-    return attr ;
-}
-public void setProperties(HashMap<String, String> properties) {
-        this.props = properties;
+
+    public void setConfigFile(ConfigFile cfg, String path) {
+        this.config = cfg;
+        this.path=path;
     }
 
     @Override
-        public void setWorkspace(Workspace wrkspc) {
+    public void setWorkspace(Workspace wrkspc) {
         this.workspace = wrkspc;
     }
 
     @Override
-        public Workspace getWorkspace() {
+    public Workspace getWorkspace() {
         return workspace;
     }
 
     @Override
-        public boolean cancel() {
+    public boolean cancel() {
         cancel = true;
         return true;
     }
 
     @Override
-        public void setProgressTicket(ProgressTicket pt) {
+    public void setProgressTicket(ProgressTicket pt) {
         this.progress = pt;
     }
 }

@@ -53,6 +53,7 @@ import javax.swing.JFileChooser;
 import org.gephi.ui.utils.DialogFileFilter;
 import org.openide.util.NbPreferences;
 import org.openide.windows.WindowManager;
+import uk.ac.ox.oii.sigmaexporter.model.ConfigFile;
 
 /**
  * Settings panel which configures the path of the SQLite file.
@@ -121,7 +122,7 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
         txtEdge.setText(prefs.get("legend.edge",""));
         txtColor.setText(prefs.get("legend.color",""));
         cbSearch.setSelected(Boolean.valueOf(prefs.get("features.search","true")));
-        ddHover.setSelectedItem(prefs.get("features.hoverBehavior", "Nothing"));
+        ddHover.setSelectedItem(prefs.get("features.hoverBehavior", "None"));
         ddGroupSelector.setSelectedItem(prefs.get("features.groupSelectAttribute", "None"));
         ddImageAttribute.setSelectedItem(prefs.get("informationPanel.imageAttribute","None"));
         cbGroupEdges.setSelected(Boolean.valueOf(prefs.get("informationPanel.groupByEdgeDirection","false")));
@@ -134,10 +135,14 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
     }
 
     public void unsetup(boolean update) {
-        HashMap<String,String> props = new HashMap<String,String>();
+        //HashMap<String,String> props = new HashMap<String,String>();
+        Preferences props = NbPreferences.forModule(SigmaSettingsPanel.class);
+        String path="";
         if (update) {
             try {
-                props.put("path",pathTextField.getText());
+                path = pathTextField.getText();
+                props.put("path",path);
+                
                 props.put("legend.node",txtNode.getText());
                 props.put("legend.edge",txtEdge.getText());
                 props.put("legend.color",txtColor.getText());
@@ -155,11 +160,9 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
                 
             } catch (Exception e) {
             }
-            Preferences store = NbPreferences.forModule(SigmaSettingsPanel.class);
-            for (String key : props.keySet()) {
-                store.put(key, props.get(key));
-            }
-            exporter.setProperties(props);
+            ConfigFile cfg = new ConfigFile();
+            cfg.readFromPrefs(props);
+            exporter.setConfigFile(cfg,path);
         }
     }
 
