@@ -108,6 +108,8 @@ public class SigmaExporterUI implements ExporterClassUI {
     public void action() {
         //Create exporter
         final SigmaExporter exporter = new SigmaExporter();
+        final Workspace currentWorkspace = Lookup.getDefault().lookup(ProjectController.class).getCurrentWorkspace();
+        exporter.setWorkspace(currentWorkspace);
 
         //Create the settings panel
         SigmaSettingsPanel settingPanel = new SigmaSettingsPanel();
@@ -126,8 +128,8 @@ public class SigmaExporterUI implements ExporterClassUI {
                 @Override
                 public void run() {
                     //Get the current workspace and set it to the exporter
-                    Workspace currentWorkspace = Lookup.getDefault().lookup(ProjectController.class).getCurrentWorkspace();
-                    exporter.setWorkspace(currentWorkspace);
+                    //Workspace currentWorkspace = Lookup.getDefault().lookup(ProjectController.class).getCurrentWorkspace();
+                    //exporter.setWorkspace(currentWorkspace);
                     
                     //Execute export
                     cancelled = !exporter.execute();

@@ -1,59 +1,48 @@
 /*
-Copyright 2008-2011 Gephi
-Authors : Mathieu Bastian <mathieu.bastian@gephi.org>
-Website : http://www.gephi.org
+ Copyright Scott Hale, 2012
+ * 
+ 
+ Base on code from 
+ Copyright 2008-2011 Gephi
+ Authors : Mathieu Bastian <mathieu.bastian@gephi.org>
+ Website : http://www.gephi.org
 
-This file is part of Gephi.
+ Contributor(s):
 
-DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
-
-Copyright 2011 Gephi Consortium. All rights reserved.
-
-The contents of this file are subject to the terms of either the GNU
-General Public License Version 3 only ("GPL") or the Common
-Development and Distribution License("CDDL") (collectively, the
-"License"). You may not use this file except in compliance with the
-License. You can obtain a copy of the License at
-http://gephi.org/about/legal/license-notice/
-or /cddl-1.0.txt and /gpl-3.0.txt. See the License for the
-specific language governing permissions and limitations under the
-License.  When distributing the software, include this License Header
-Notice in each file and include the License files at
-/cddl-1.0.txt and /gpl-3.0.txt. If applicable, add the following below the
-License Header, with the fields enclosed by brackets [] replaced by
-your own identifying information:
-"Portions Copyrighted [year] [name of copyright owner]"
-
-If you wish your version of this file to be governed by only the CDDL
-or only the GPL Version 3, indicate your decision by adding
-"[Contributor] elects to include this software in this distribution
-under the [CDDL or GPL Version 3] license." If you do not indicate a
-single choice of license, a recipient has the option to distribute
-your version of this file under either the CDDL, the GPL Version 3 or
-to extend the choice of license to its licensees as provided above.
-However, if you add GPL Version 3 code and therefore, elected the GPL
-Version 3 license, then the option applies only if the new code is
-made subject to such option by the copyright holder.
-
-Contributor(s):
-
-Portions Copyrighted 2011 Gephi Consortium.
+ Portions Copyrighted 2011 Gephi Consortium.
  */
 package uk.ac.ox.oii.sigmaexporter;
 
-import com.sun.org.apache.bcel.internal.generic.SALOAD;
+import com.google.gson.Gson;
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.net.URI;
+import java.net.URL;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.gephi.data.attributes.api.AttributeColumn;
+import org.gephi.data.attributes.api.AttributeRow;
+import org.gephi.data.attributes.api.AttributeValue;
 import org.gephi.graph.api.Edge;
 import org.gephi.graph.api.Graph;
-import org.gephi.graph.api.GraphController;
 import org.gephi.graph.api.GraphModel;
 import org.gephi.graph.api.Node;
+import org.gephi.graph.api.NodeData;
 import org.gephi.io.exporter.spi.ByteExporter;
 import org.gephi.io.exporter.spi.CharacterExporter;
 import org.gephi.io.exporter.spi.Exporter;
@@ -61,118 +50,290 @@ import org.gephi.project.api.Workspace;
 import org.gephi.utils.longtask.spi.LongTask;
 import org.gephi.utils.progress.Progress;
 import org.gephi.utils.progress.ProgressTicket;
-import org.openide.util.Lookup;
 
-/**
- * Example of a custom exporter exporting the graph to a SQLite database file.
- * <p>
- * File exporters are normally implementing {@link ByteExporter}
- * or {@link CharacterExporter} and write to a {@link Writer} or {@link InputStream}.
- * In this case that won't work because the SQLite driver manages the file writing
- * by itself so we simply have to execute UPDATE queries.
- * <p>
- * The exporter writes only the basic graph structure. It also shows how to use
- * the progress and cancel management because it implements {@link LongTask}.
- * <p>
- * This exporter's <code>execute()</code> method will be called from the 
- * {@link SQLiteDatabaseExporterUI} class which controls the execution.
- * 
- * @see SQLiteDatabaseExporterUI
- * @author Mathieu Bastian
- */
 public class SigmaExporter implements Exporter, LongTask {
 
-    private File path;
+    private HashMap<String, String> props;
     private Workspace workspace;
     private ProgressTicket progress;
     private boolean cancel = false;
 
     @Override
     public boolean execute() {
-        //Connection connection = null;
         try {
-            if (path.getParentFile().exists()) {
-                //Create connection
-                
+            if (props != null && (new File(props.get("path"))).getParentFile().exists()) {
+                final File path = new File(props.get("path"));
+                props.remove("path");//Don't need anymore
+                FileWriter writer = null;
 
-                //Get the current graph in the defined workspace
-                GraphController graphController = Lookup.getDefault().lookup(GraphController.class);
-                GraphModel graphModel = graphController.getModel(workspace);
-                Graph graph = graphModel.getGraphVisible();
+                //Copy skeleton template
+                //URL skeleton = SigmaExporter.class.getClassLoader().getResource("resources/network.zip");//index.html
+                //URL num2 = SigmaExporter.class.getResource("resources/network/index.html");//uk/ac/ox/oii/sigmaexporter/resources/network/index.html
+                //URL skeleton = SigmaExporter.class.getResource("resources/network.zip");//index.html
+                InputStream num2 = SigmaExporter.class.getResourceAsStream("resources/network.zip"); //uk/ac/ox/oii/sigmaexporter/resources/network/index.html
+                // com.google.common.io.Files.copy(new File(skeleton.getFile()), path);//Hope to use NIO from JDK7 soon! Does Gephi require this yet?
+                Path zip = Paths.get(path.getAbsolutePath()+"/zip.zip");
+                Files.copy(num2,zip);
+                
+                //ZipHandler.extratZip(num2, path.getAbsolutePath().toString()+"/");
+                //URI uri = URI.create(path+"/zip.zip");// + skeleton.getPath());//.substring(skeleton.getPath().indexOf("!") + 1));
+               // System.out.println(uri.toString());
+                Map<String, String> env = new HashMap<String, String>();
+                env.put("create", "true");
+
+
+
+
+                //walk the zip file tree and copy files to the destination
+                try {
+                    //FileSystem zipFileSystem = FileSystems.newFileSystem(uri, env);
+                    FileSystem zipFileSystem = FileSystems.newFileSystem(zip, null);
+                    final Path root = zipFileSystem.getPath("/");
+
+                    Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
+                        @Override
+                        public FileVisitResult visitFile(Path file,
+                                BasicFileAttributes attrs) throws IOException {
+                            final Path destFile = Paths.get(path.toString(),
+                                    file.toString());
+                            System.out.printf("Extracting file %s to %s\n", file, destFile);
+                            Files.copy(file, destFile, StandardCopyOption.REPLACE_EXISTING);
+                            return FileVisitResult.CONTINUE;
+                        }
+
+                        @Override
+                        public FileVisitResult preVisitDirectory(Path dir,
+                                BasicFileAttributes attrs) throws IOException {
+                            final Path dirToCreate = Paths.get(path.toString(),
+                                    dir.toString());
+                            if (Files.notExists(dirToCreate)) {
+                                System.out.printf("Creating directory %s\n", dirToCreate);
+                                Files.createDirectory(dirToCreate);
+                            }
+                            return FileVisitResult.CONTINUE;
+                        }
+                    });
+                    zip.toFile().delete();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            /*Files.copy(
+             ,
+             Paths.get(path.getAbsolutePath())
+             );*/
+
+            //Write config.json
+            try {
+                writer = new FileWriter(path.getAbsolutePath() + "/network/config.json");
+                //StringBuffer sb = new StringBuffer();
+                //sb.append("{\"type\":\"network\",\"data\":\"data.json\",\"version\":\"1.0\"");
+
+                props.put("type", "network");
+                props.put("data", "data.json");
+                props.put("version", "1.0");
+
+                for (String key : props.keySet()) {
+                    String val = props.get(key);
+                    /*if (val.equalsIgnoreCase("true") || val.equalsIgnoreCase("false")) {
+                     boolean b = Boolean.valueOf(val);
+                     }*/
+                    if (val != null && val.length() >= 4 && val.substring(0, 4).equals("None")) {
+                        props.remove(key);
+                    }
+                }
+
+                Gson gson = new Gson();
+                gson.toJson(props, writer);
+
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                new RuntimeException(e);
+            } finally {
+                if (writer != null) {
+                    writer.close();
+                    writer = null;
+                }
+            }
+
+
+            //Write data.json
+            try {
+                writer = new FileWriter(path.getAbsolutePath() + "/network/data.json");
+                GraphModel graphModel = workspace.getLookup().lookup(GraphModel.class);
+                Graph graph = null;
+                graph = graphModel.getGraphVisible();
 
                 //Count the number of tasks (nodes + edges) and start the progress
                 int tasks = graph.getNodeCount() + graph.getEdgeCount();
                 Progress.start(progress, tasks);
 
+                //FileWriter fwriter = new  FileWriter(writer);
+                writer.write("{\"nodes\":[");
+
+
+                //EdgeIterable eIt = graph.getEdges();
                 //Export nodes. Progress is incremented at each step.
-                for (Node n : graph.getNodes().toArray()) {
-                    String id = n.getNodeData().getId();
-                    String label = n.getNodeData().getLabel();
-                    //statement.executeUpdate("insert into nodes values('" + id + "', '" + label + "')");
+                Node[] nodeArray = graph.getNodes().toArray();
+                for (int i = 0; i < nodeArray.length; i++) {
+                    //NodeIterator nIt = graph.getNodes().iterator();
+                    //while (nIt.hasNext()) {
+                    Node n = nodeArray[i];//nIt.next();
+                    NodeData nd = n.getNodeData();
+                    String id = nd.getId();
+                    String label = nd.getLabel();
+                    float x = nd.x();
+                    float y = nd.y();
+                    float size = nd.getSize();
+                    String color = "rgb(" + (int) (nd.r() * 255) + "," + (int) (nd.g() * 255) + "," + (int) (nd.b() * 255) + ")";
+
+                    StringBuilder sb = new StringBuilder();
+                    if (i != 0) {
+                        sb.append(",\n");//No comma after last one (nor before first one)
+                    }
+                    sb.append("{\"id\":\"" + id + "\", \"label\":\"" + label + "\",");
+                    sb.append("\"x\":" + x + ",\"y\":" + y + ",");
+                    sb.append("\"size\":" + size + ",\"color\":\"" + color + "\",\"attributes\":{");
+
+
+                    //Map<String,String> attr = new  HashMap<String,String>();
+                    AttributeRow nAttr = (AttributeRow) nd.getAttributes();
+                    boolean first = true;
+                    for (int j = 0; j < nAttr.countValues(); j++) {
+                        Object valObj = nAttr.getValue(j);
+                        if (valObj == null) {
+                            continue;
+                        }
+                        String val = valObj.toString();
+                        AttributeColumn col = nAttr.getColumnAt(j);
+                        if (col == null) {
+                            continue;
+                        }
+                        String name = col.getTitle();
+                        if (name.equalsIgnoreCase("Id") || name.equalsIgnoreCase("Label")
+                                || name.equalsIgnoreCase("uid")) {
+                            continue;
+                        }
+                        // attr.put(name,val);
+                        if (first) {
+                            first = false;
+                        } else {
+                            sb.append(",");
+                        }
+                        sb.append("\"" + name + "\":\"" + val + "\"");
+                    }
+                    sb.append("}}");
+
+                    writer.write(sb.toString());
                     if (cancel) {
                         return false;
                     }
                     Progress.progress(progress);
                 }
+                writer.write("],\"edges\":[");
 
                 //Export edges. Progress is incremented at each step.
-                for (Edge e : graph.getEdges().toArray()) {
+                Edge[] edgeArray = graph.getEdges().toArray();
+                for (int i = 0; i < edgeArray.length; i++) {
+                    //EdgeIterator eIt = graph.getEdges().iterator();
+                    //while (eIt.hasNext()) {
+                    Edge e = edgeArray[i];//eIt.next();
                     String sourceId = e.getSource().getNodeData().getId();
                     String targetId = e.getTarget().getNodeData().getId();
                     String weight = String.valueOf(e.getWeight());
-                    //statement.executeUpdate("insert into edges values('" + sourceId + "', '" + targetId + "', '" + weight + "')");
+                    //e.getEdgeData().r();gb of edge data
+                    //Write to file
+                    if (i != 0) {
+                        writer.write(",\n");//No comma after last one
+                    }
+                    writer.write("{\"source\":\"" + sourceId + "\",\"target\":\"" + targetId + "\"");
+                    writer.write(",\"weight\":\"" + weight + "\"");
+                    writer.write(",\"id\":\"" + e.getId() + "\"}");
                     if (cancel) {
                         return false;
                     }
                     Progress.progress(progress);
                 }
-
-                //Finish progress
-                Progress.finish(progress);
-                return true;
-            } else {
-                throw new FileNotFoundException(path.getAbsolutePath() + " does not exist");
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
-           /* try {
-                if (connection != null) {
-                    connection.close();
+                writer.write("]}");
+            } catch (Exception e) {
+                e.printStackTrace();
+                new RuntimeException(e);
+            } finally {
+                if (writer != null) {
+                    writer.close();
+                    writer = null;
                 }
-            } catch (SQLException e) {
-                // connection close failed.
-                System.err.println(e);
-            }*/
+            }
+
+
+            //Finish progress
+            Progress.finish(progress);
+            return true;
+        } 
+
+    
+    
+
+    
+        else {
+                throw new Exception("Invalid or null settings.");
+    }
+}
+catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 
-    public File getPath() {
-        return path;
+    public HashMap<String, String> getProperties() {
+        return props;
     }
 
-    public void setPath(File path) {
-        this.path = path;
+    public List<String> getNodeAttributes() {
+        List<String> attr = new ArrayList<String>();
+
+        //GraphController graphController = Lookup.getDefault().lookup(GraphController.class);
+        //GraphModel graphModel = graphController.getModel(workspace);
+        //Graph graph = graphModel.getGraphVisible();
+        GraphModel 
+
+
+
+graphModel = workspace.getLookup().lookup(GraphModel.class  
+
+    );
+        Graph graph = graphModel.getGraphVisible();
+    AttributeRow ar = (AttributeRow) (graph.getNodes().toArray()[0].getNodeData().getAttributes());
+    for (AttributeValue av
+
+    : ar.getValues () 
+        ) {
+            attr.add(av.getColumn().getTitle());
+    }
+    return attr ;
+}
+public void setProperties(HashMap<String, String> properties) {
+        this.props = properties;
     }
 
     @Override
-    public void setWorkspace(Workspace wrkspc) {
+        public void setWorkspace(Workspace wrkspc) {
         this.workspace = wrkspc;
     }
 
     @Override
-    public Workspace getWorkspace() {
+        public Workspace getWorkspace() {
         return workspace;
     }
 
     @Override
-    public boolean cancel() {
+        public boolean cancel() {
         cancel = true;
         return true;
     }
 
     @Override
-    public void setProgressTicket(ProgressTicket pt) {
+        public void setProgressTicket(ProgressTicket pt) {
         this.progress = pt;
     }
 }

@@ -44,6 +44,11 @@ package uk.ac.ox.oii.sigmaexporter;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Properties;
+import java.util.Set;
+import java.util.prefs.Preferences;
 import javax.swing.JFileChooser;
 import org.gephi.ui.utils.DialogFileFilter;
 import org.openide.util.NbPreferences;
@@ -59,7 +64,7 @@ import org.openide.windows.WindowManager;
  */
 public class SigmaSettingsPanel extends javax.swing.JPanel {
 
-    final String LAST_PATH = "SQLiteDatabaseSettingsPanel_Last_Path";
+    //final String LAST_PATH = "SQLiteDatabaseSettingsPanel_Last_Path";
     private File path;
     private SigmaExporter exporter;
 
@@ -72,11 +77,11 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
             @Override
             public void actionPerformed(ActionEvent e) {
                 JFileChooser fileChooser = new JFileChooser(pathTextField.getText());
-                fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-                DialogFileFilter dialogFileFilter = new DialogFileFilter("SQLite files");
-                dialogFileFilter.addExtensions(new String[] {".sqlite"});
-                fileChooser.addChoosableFileFilter(dialogFileFilter);
-                fileChooser.setAcceptAllFileFilterUsed(false);
+                fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                //DialogFileFilter dialogFileFilter = new DialogFileFilter("SQLite files");
+                //dialogFileFilter.addExtensions(new String[] {".sqlite"});
+                //fileChooser.addChoosableFileFilter(dialogFileFilter);
+                //fileChooser.setAcceptAllFileFilterUsed(false);
                 int result = fileChooser.showSaveDialog(WindowManager.getDefault().getMainWindow());
                 if (result == JFileChooser.APPROVE_OPTION) {
                     path = fileChooser.getSelectedFile();
@@ -88,39 +93,73 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
 
     public void setup(SigmaExporter exporter) {
         this.exporter = exporter;
-        path = new File(NbPreferences.forModule(SigmaSettingsPanel.class).get(LAST_PATH, System.getProperty("user.home")+"/export.sqlite"));
-        pathTextField.setText(path.getAbsolutePath());
+        //path = new File(NbPreferences.forModule(SigmaSettingsPanel.class).get(LAST_PATH, System.getProperty("user.home")+"/sigma"));
+        //pathTextField.setText(path.getAbsolutePath());
         
         //Checkbox for each node attribute (should it be included)
-        javax.swing.JCheckBox a = new javax.swing.JCheckBox("a");
-        a.setText("aaa");
-        a.setVisible(true);
-        //attributesPanel.add(a);
-        attributesPanel.setViewportView(a);
-        
-        javax.swing.JCheckBox b = new javax.swing.JCheckBox("b");
+        /*javax.swing.JCheckBox b = new javax.swing.JCheckBox("b");
         a.setText("bbb");
         a.setVisible(true);
         //attributesPanel.add(a);
-        attributesPanel.setViewportView(b);
+        attributesPanel.setViewportView(b);*/
        
+        List<String> attributes = exporter.getNodeAttributes();
         
-        //also add to group selector combo box
-        cbGroupSelector.addItem("a");
-        cbGroupSelector.addItem("c");
-        cbGroupSelector.addItem("b");
-        cbGroupSelector.addItem("d");
+        for (String a : attributes) {
+            ddGroupSelector.addItem(a);
+            ddImageAttribute.addItem(a);
+            //TODO: Also create check box for attributesPanel
+            //javax.swing.JCheckBox cb = new javax.swing.JCheckBox();
+            //cb.setText(a);
+            //attributesPanel.add(cb);
+        }
+        attributesScrollPanel.setViewportView(attributesPanel);
         
+        Preferences prefs = NbPreferences.forModule(SigmaSettingsPanel.class);
+        pathTextField.setText(prefs.get("path", ""));
+        txtNode.setText(prefs.get("legend.node", ""));
+        txtEdge.setText(prefs.get("legend.edge",""));
+        txtColor.setText(prefs.get("legend.color",""));
+        cbSearch.setSelected(Boolean.valueOf(prefs.get("features.search","true")));
+        ddHover.setSelectedItem(prefs.get("features.hoverBehavior", "Nothing"));
+        ddGroupSelector.setSelectedItem(prefs.get("features.groupSelectAttribute", "None"));
+        ddImageAttribute.setSelectedItem(prefs.get("informationPanel.imageAttribute","None"));
+        cbGroupEdges.setSelected(Boolean.valueOf(prefs.get("informationPanel.groupByEdgeDirection","false")));
+        txtShort.setText(prefs.get("text.intro", ""));
+        txtLong.setText(prefs.get("text.more", ""));
+        txtTitle.setText(prefs.get("text.title", ""));        
+        txtLogo.setText(prefs.get("logo.file", ""));        
+        txtLink.setText(prefs.get("logo.link", ""));        
+        txtAuthor.setText(prefs.get("logo.author", ""));
     }
 
     public void unsetup(boolean update) {
+        HashMap<String,String> props = new HashMap<String,String>();
         if (update) {
             try {
-                path = new File(pathTextField.getText());
+                props.put("path",pathTextField.getText());
+                props.put("legend.node",txtNode.getText());
+                props.put("legend.edge",txtEdge.getText());
+                props.put("legend.color",txtColor.getText());
+                props.put("features.search",String.valueOf(cbSearch.isSelected()));
+                props.put("features.hoverBehavior",String.valueOf(ddHover.getSelectedItem()));
+                props.put("features.groupSelectAttribute",String.valueOf(ddGroupSelector.getSelectedItem()));
+                props.put("informationPanel.imageAttribute",String.valueOf(ddImageAttribute.getSelectedItem()));
+                props.put("informationPanel.groupByEdgeDirection",String.valueOf(cbGroupEdges.isSelected()));
+                props.put("text.intro",txtShort.getText());
+                props.put("text.more",txtLong.getText());
+                props.put("text.title",txtTitle.getText());
+                props.put("logo.file",txtLogo.getText());
+                props.put("logo.link",txtLink.getText());
+                props.put("logo.author",txtAuthor.getText());
+                
             } catch (Exception e) {
             }
-            NbPreferences.forModule(SigmaSettingsPanel.class).put(LAST_PATH, path.getAbsolutePath());
-            exporter.setPath(path);
+            Preferences store = NbPreferences.forModule(SigmaSettingsPanel.class);
+            for (String key : props.keySet()) {
+                store.put(key, props.get(key));
+            }
+            exporter.setProperties(props);
         }
     }
 
@@ -140,34 +179,37 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
         jLabel3 = new javax.swing.JLabel();
         jLabel4 = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
-        jTextField1 = new javax.swing.JTextField();
-        jTextField2 = new javax.swing.JTextField();
-        jTextField3 = new javax.swing.JTextField();
+        txtNode = new javax.swing.JTextField();
+        txtEdge = new javax.swing.JTextField();
+        txtColor = new javax.swing.JTextField();
         jLabel6 = new javax.swing.JLabel();
         jLabel8 = new javax.swing.JLabel();
         jLabel9 = new javax.swing.JLabel();
-        jCheckBox2 = new javax.swing.JCheckBox();
-        jComboBox1 = new javax.swing.JComboBox();
+        cbSearch = new javax.swing.JCheckBox();
+        ddHover = new javax.swing.JComboBox();
         jLabel7 = new javax.swing.JLabel();
         jLabel10 = new javax.swing.JLabel();
         jLabel11 = new javax.swing.JLabel();
         jLabel12 = new javax.swing.JLabel();
-        attributesPanel = new javax.swing.JScrollPane();
-        jCheckBox1 = new javax.swing.JCheckBox();
+        attributesScrollPanel = new javax.swing.JScrollPane();
+        attributesPanel = new javax.swing.JPanel();
+        jLabel18 = new javax.swing.JLabel();
         jScrollPane2 = new javax.swing.JScrollPane();
-        jTextArea1 = new javax.swing.JTextArea();
+        txtShort = new javax.swing.JTextArea();
         jScrollPane3 = new javax.swing.JScrollPane();
-        jTextArea2 = new javax.swing.JTextArea();
-        jTextField4 = new javax.swing.JTextField();
-        jTextField5 = new javax.swing.JTextField();
-        jTextField6 = new javax.swing.JTextField();
+        txtLong = new javax.swing.JTextArea();
+        txtLogo = new javax.swing.JTextField();
+        txtLink = new javax.swing.JTextField();
+        txtAuthor = new javax.swing.JTextField();
         jLabel13 = new javax.swing.JLabel();
         jLabel14 = new javax.swing.JLabel();
         jLabel15 = new javax.swing.JLabel();
-        cbGroupSelector = new javax.swing.JComboBox();
-        jCheckBox4 = new javax.swing.JCheckBox();
-        cbImageAttribute = new javax.swing.JComboBox();
+        ddGroupSelector = new javax.swing.JComboBox();
+        cbGroupEdges = new javax.swing.JCheckBox();
+        ddImageAttribute = new javax.swing.JComboBox();
         jLabel16 = new javax.swing.JLabel();
+        txtTitle = new javax.swing.JTextField();
+        jLabel17 = new javax.swing.JLabel();
 
         jLabel1.setFont(jLabel1.getFont().deriveFont(jLabel1.getFont().getStyle() | java.awt.Font.BOLD, jLabel1.getFont().getSize()+3));
         jLabel1.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jLabel1.text")); // NOI18N
@@ -175,6 +217,11 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
         pathTextField.setText("\n"); // NOI18N
 
         browseButton.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.browseButton.text")); // NOI18N
+        browseButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                browseButtonActionPerformed(evt);
+            }
+        });
 
         jLabel2.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jLabel2.text")); // NOI18N
 
@@ -184,27 +231,31 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
 
         jLabel5.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jLabel5.text")); // NOI18N
 
-        jTextField1.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jTextField1.text")); // NOI18N
+        txtNode.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.txtNode.text")); // NOI18N
+        txtNode.setToolTipText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.txtNode.toolTipText")); // NOI18N
 
-        jTextField2.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jTextField2.text")); // NOI18N
+        txtEdge.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.txtEdge.text")); // NOI18N
+        txtEdge.setToolTipText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.txtEdge.toolTipText")); // NOI18N
 
-        jTextField3.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jTextField3.text")); // NOI18N
+        txtColor.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.txtColor.text")); // NOI18N
+        txtColor.setToolTipText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.txtColor.toolTipText")); // NOI18N
 
         jLabel6.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jLabel6.text")); // NOI18N
 
         jLabel8.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jLabel8.text")); // NOI18N
 
         jLabel9.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jLabel9.text")); // NOI18N
+        jLabel9.setToolTipText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jLabel9.toolTipText")); // NOI18N
 
-        jCheckBox2.setSelected(true);
-        jCheckBox2.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jCheckBox2.text")); // NOI18N
-        jCheckBox2.addActionListener(new java.awt.event.ActionListener() {
+        cbSearch.setSelected(true);
+        cbSearch.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.cbSearch.text")); // NOI18N
+        cbSearch.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jCheckBox2ActionPerformed(evt);
+                cbSearchActionPerformed(evt);
             }
         });
 
-        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "Nothing (Default)", "Dim" }));
+        ddHover.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "None (Default)", "Dim" }));
 
         jLabel7.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jLabel7.text")); // NOI18N
 
@@ -214,22 +265,40 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
 
         jLabel12.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jLabel12.text")); // NOI18N
 
-        jCheckBox1.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jCheckBox1.text")); // NOI18N
-        attributesPanel.setViewportView(jCheckBox1);
+        jLabel18.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jLabel18.text")); // NOI18N
 
-        jTextArea1.setColumns(20);
-        jTextArea1.setRows(5);
-        jScrollPane2.setViewportView(jTextArea1);
+        javax.swing.GroupLayout attributesPanelLayout = new javax.swing.GroupLayout(attributesPanel);
+        attributesPanel.setLayout(attributesPanelLayout);
+        attributesPanelLayout.setHorizontalGroup(
+            attributesPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(attributesPanelLayout.createSequentialGroup()
+                .addGap(81, 81, 81)
+                .addComponent(jLabel18)
+                .addContainerGap(443, Short.MAX_VALUE))
+        );
+        attributesPanelLayout.setVerticalGroup(
+            attributesPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(attributesPanelLayout.createSequentialGroup()
+                .addGap(76, 76, 76)
+                .addComponent(jLabel18)
+                .addContainerGap(85, Short.MAX_VALUE))
+        );
 
-        jTextArea2.setColumns(20);
-        jTextArea2.setRows(5);
-        jScrollPane3.setViewportView(jTextArea2);
+        attributesScrollPanel.setViewportView(attributesPanel);
 
-        jTextField4.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jTextField4.text")); // NOI18N
+        txtShort.setColumns(20);
+        txtShort.setRows(5);
+        jScrollPane2.setViewportView(txtShort);
 
-        jTextField5.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jTextField5.text")); // NOI18N
+        txtLong.setColumns(20);
+        txtLong.setRows(5);
+        jScrollPane3.setViewportView(txtLong);
 
-        jTextField6.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jTextField6.text")); // NOI18N
+        txtLogo.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.txtLogo.text")); // NOI18N
+
+        txtLink.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.txtLink.text")); // NOI18N
+
+        txtAuthor.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.txtAuthor.text")); // NOI18N
 
         jLabel13.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jLabel13.text")); // NOI18N
 
@@ -237,13 +306,17 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
 
         jLabel15.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jLabel15.text")); // NOI18N
 
-        cbGroupSelector.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "None" }));
+        ddGroupSelector.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "None" }));
 
-        jCheckBox4.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jCheckBox4.text")); // NOI18N
+        cbGroupEdges.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.cbGroupEdges.text")); // NOI18N
 
-        cbImageAttribute.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "None (Default)" }));
+        ddImageAttribute.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "None (Default)" }));
 
         jLabel16.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jLabel16.text")); // NOI18N
+
+        txtTitle.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.txtTitle.text")); // NOI18N
+
+        jLabel17.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jLabel17.text")); // NOI18N
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
@@ -251,89 +324,87 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane3, javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(layout.createSequentialGroup()
                         .addContainerGap()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                .addComponent(pathTextField, javax.swing.GroupLayout.DEFAULT_SIZE, 566, Short.MAX_VALUE)
+                                .addComponent(pathTextField)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(browseButton))
                             .addGroup(layout.createSequentialGroup()
                                 .addComponent(jLabel1)
                                 .addGap(0, 0, Short.MAX_VALUE))))
                     .addGroup(layout.createSequentialGroup()
-                        .addGap(33, 33, 33)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel13)
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                .addComponent(attributesPanel, javax.swing.GroupLayout.PREFERRED_SIZE, 235, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(18, 18, 18)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addComponent(jLabel14)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                                    .addComponent(jScrollPane2)))))
+                            .addComponent(attributesScrollPanel, javax.swing.GroupLayout.PREFERRED_SIZE, 256, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel9))
+                        .addGap(18, 18, 18)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel14)
+                            .addComponent(jScrollPane2)))
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jLabel2)
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addComponent(jLabel3)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addComponent(jLabel4)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addComponent(jLabel5)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                                .addGap(70, 70, 70)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(jLabel7)
-                                    .addGroup(layout.createSequentialGroup()
+                                .addComponent(jLabel4)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(txtEdge, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(jLabel5)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(txtColor, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(jLabel3)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(txtNode, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(jLabel2))
+                        .addGap(41, 41, 41)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel7)
+                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                .addGroup(layout.createSequentialGroup()
+                                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(jLabel10)
+                                        .addComponent(jLabel11))
+                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                        .addComponent(txtLogo, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(txtLink, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                         .addComponent(jLabel12)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addComponent(jTextField6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                            .addComponent(jLabel10)
-                                            .addComponent(jLabel11))
-                                        .addGap(36, 36, 36)
-                                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                            .addComponent(jTextField4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                            .addComponent(jTextField5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                                        .addComponent(jLabel17))
+                                    .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(txtTitle, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(txtAuthor, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 59, Short.MAX_VALUE)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel6)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(cbSearch)
+                                .addGap(33, 33, 33)
+                                .addComponent(cbGroupEdges))
+                            .addGroup(layout.createSequentialGroup()
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addGroup(layout.createSequentialGroup()
-                                        .addGap(51, 51, 51)
+                                        .addComponent(jLabel8)
+                                        .addGap(26, 26, 26))
+                                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                            .addComponent(jLabel6)
-                                            .addGroup(layout.createSequentialGroup()
-                                                .addComponent(jCheckBox2)
-                                                .addGap(33, 33, 33)
-                                                .addComponent(jCheckBox4))))
-                                    .addGroup(layout.createSequentialGroup()
-                                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                            .addGroup(layout.createSequentialGroup()
-                                                .addGap(51, 51, 51)
-                                                .addComponent(jLabel8)
-                                                .addGap(26, 26, 26))
-                                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                    .addComponent(jLabel16)
-                                                    .addComponent(jLabel15))
-                                                .addGap(18, 18, 18)))
-                                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                            .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                            .addComponent(cbGroupSelector, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                            .addComponent(cbImageAttribute, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))))
-                            .addComponent(jLabel9))
-                        .addGap(0, 0, Short.MAX_VALUE))
-                    .addComponent(jScrollPane3, javax.swing.GroupLayout.Alignment.TRAILING))
+                                            .addComponent(jLabel16)
+                                            .addComponent(jLabel15))
+                                        .addGap(18, 18, 18)))
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(ddHover, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(ddGroupSelector, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(ddImageAttribute, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                        .addGap(97, 97, 97)))
                 .addContainerGap())
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel13)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -347,82 +418,92 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(jLabel2)
+                        .addComponent(jLabel6)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(cbSearch)
+                            .addComponent(cbGroupEdges))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jLabel8)
+                            .addComponent(ddHover, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(ddGroupSelector, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel15))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(ddImageAttribute, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel16)))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(23, 23, 23)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(jLabel3)
-                            .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(txtNode, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(jLabel4)
-                            .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(txtEdge, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(jLabel5)
-                            .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(27, 27, 27)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(jLabel9)
-                            .addComponent(jLabel14)))
+                            .addComponent(txtColor, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(jLabel2)
+                        .addComponent(jLabel7))
                     .addGroup(layout.createSequentialGroup()
+                        .addGap(23, 23, 23)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
-                                .addComponent(jLabel7)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                                     .addComponent(jLabel10)
-                                    .addComponent(jTextField4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addComponent(txtLogo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                                     .addComponent(jLabel11)
-                                    .addComponent(jTextField5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addComponent(txtLink, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                    .addComponent(jLabel12)
-                                    .addComponent(jTextField6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addComponent(jLabel12))
                             .addGroup(layout.createSequentialGroup()
-                                .addComponent(jLabel6)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                    .addComponent(jCheckBox2)
-                                    .addComponent(jCheckBox4))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                    .addComponent(jLabel8)
-                                    .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                    .addComponent(cbGroupSelector, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(jLabel15))))
+                                .addGap(63, 63, 63)
+                                .addComponent(txtAuthor, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(cbImageAttribute, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jLabel16))))
-                .addGap(15, 15, 15)
+                            .addComponent(txtTitle, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel17))))
+                .addGap(18, 18, 18)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel9)
+                    .addComponent(jLabel14))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 171, Short.MAX_VALUE)
-                    .addComponent(attributesPanel))
-                .addGap(17, 17, 17)
-                .addComponent(jLabel13)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 136, Short.MAX_VALUE)
+                    .addComponent(jScrollPane2)
+                    .addComponent(attributesScrollPanel, javax.swing.GroupLayout.PREFERRED_SIZE, 144, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 24, Short.MAX_VALUE)
+                .addComponent(jLabel13, javax.swing.GroupLayout.PREFERRED_SIZE, 17, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(5, 5, 5)
+                .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 139, Short.MAX_VALUE)
                 .addGap(37, 37, 37))
         );
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jCheckBox2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckBox2ActionPerformed
+    private void cbSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbSearchActionPerformed
         // TODO add your handling code here:
-    }//GEN-LAST:event_jCheckBox2ActionPerformed
+    }//GEN-LAST:event_cbSearchActionPerformed
+
+    private void browseButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_browseButtonActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_browseButtonActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JScrollPane attributesPanel;
+    private javax.swing.JPanel attributesPanel;
+    private javax.swing.JScrollPane attributesScrollPanel;
     private javax.swing.JButton browseButton;
-    private javax.swing.JComboBox cbGroupSelector;
-    private javax.swing.JComboBox cbImageAttribute;
-    private javax.swing.JCheckBox jCheckBox1;
-    private javax.swing.JCheckBox jCheckBox2;
-    private javax.swing.JCheckBox jCheckBox4;
-    private javax.swing.JComboBox jComboBox1;
+    private javax.swing.JCheckBox cbGroupEdges;
+    private javax.swing.JCheckBox cbSearch;
+    private javax.swing.JComboBox ddGroupSelector;
+    private javax.swing.JComboBox ddHover;
+    private javax.swing.JComboBox ddImageAttribute;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
@@ -431,6 +512,8 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
     private javax.swing.JLabel jLabel14;
     private javax.swing.JLabel jLabel15;
     private javax.swing.JLabel jLabel16;
+    private javax.swing.JLabel jLabel17;
+    private javax.swing.JLabel jLabel18;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
@@ -441,14 +524,15 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
     private javax.swing.JLabel jLabel9;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
-    private javax.swing.JTextArea jTextArea1;
-    private javax.swing.JTextArea jTextArea2;
-    private javax.swing.JTextField jTextField1;
-    private javax.swing.JTextField jTextField2;
-    private javax.swing.JTextField jTextField3;
-    private javax.swing.JTextField jTextField4;
-    private javax.swing.JTextField jTextField5;
-    private javax.swing.JTextField jTextField6;
     private javax.swing.JTextField pathTextField;
+    private javax.swing.JTextField txtAuthor;
+    private javax.swing.JTextField txtColor;
+    private javax.swing.JTextField txtEdge;
+    private javax.swing.JTextField txtLink;
+    private javax.swing.JTextField txtLogo;
+    private javax.swing.JTextArea txtLong;
+    private javax.swing.JTextField txtNode;
+    private javax.swing.JTextArea txtShort;
+    private javax.swing.JTextField txtTitle;
     // End of variables declaration//GEN-END:variables
 }
