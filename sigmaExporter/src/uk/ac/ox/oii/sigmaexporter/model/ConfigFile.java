@@ -82,14 +82,14 @@ public class ConfigFile implements Serializable{
         map = new HashMap<String,Object>();
         map.put("minRatio", 0.75);
         map.put("maxRatio", 20);
-        sigma.put("graphProperties", map);
+        sigma.put("mouseProperties", map);
 
         map = new HashMap<String,Object>();
         map.put("minNodeSize", 1);
         map.put("maxNodeSize", 7);
         map.put("minEdgeSize", 0.2);
         map.put("maxEdgeSize", 0.5);
-        sigma.put("mouseProperties", map);
+        sigma.put("graphProperties", map);
         
         
         
