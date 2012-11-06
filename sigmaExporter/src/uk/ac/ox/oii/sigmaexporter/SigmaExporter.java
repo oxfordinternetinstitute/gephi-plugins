@@ -33,6 +33,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import org.gephi.data.attributes.api.AttributeColumn;
@@ -51,6 +52,9 @@ import org.gephi.utils.longtask.spi.LongTask;
 import org.gephi.utils.progress.Progress;
 import org.gephi.utils.progress.ProgressTicket;
 import uk.ac.ox.oii.sigmaexporter.model.ConfigFile;
+import uk.ac.ox.oii.sigmaexporter.model.GraphEdge;
+import uk.ac.ox.oii.sigmaexporter.model.GraphElement;
+import uk.ac.ox.oii.sigmaexporter.model.GraphNode;
 
 public class SigmaExporter implements Exporter, LongTask {
 
@@ -65,7 +69,7 @@ public class SigmaExporter implements Exporter, LongTask {
         try {
             final File pathFile = new File(path);
             if (pathFile.getParentFile().exists()) {
-                
+
                 FileWriter writer = null;
 
                 //Copy resource template
@@ -82,31 +86,13 @@ public class SigmaExporter implements Exporter, LongTask {
                 }
 
 
-
+                //Gson to handle JSON writing and escape
+                Gson gson = new Gson();
+                    
                 //Write config.json
                 try {
                     writer = new FileWriter(pathFile.getAbsolutePath() + "/network/config.json");
-                    //StringBuffer sb = new StringBuffer();
-                    //sb.append("{\"type\":\"network\",\"data\":\"data.json\",\"version\":\"1.0\"");
-
-                    /*props.put("type", "network");
-                    props.put("data", "data.json");
-                    props.put("version", "1.0");
-                    Object[] keys = props.keySet().toArray();
-                    for (Object key : keys) {
-                        String val = props.get(key);
-                        /*if (val.equalsIgnoreCase("true") || val.equalsIgnoreCase("false")) {
-                         boolean b = Boolean.valueOf(val);
-                         }*/
-                        /*if (val != null && val.length() >= 4 && val.substring(0, 4).equals("None")) {
-                            props.remove(key);
-                        }
-                    }*/
-
-                    Gson gson = new Gson();
                     gson.toJson(config, writer);
-
-
                 } catch (Exception e) {
                     e.printStackTrace();
                     new RuntimeException(e);
@@ -120,7 +106,6 @@ public class SigmaExporter implements Exporter, LongTask {
 
                 //Write data.json
                 try {
-                    writer = new FileWriter(pathFile.getAbsolutePath() + "/network/data.json");
                     GraphModel graphModel = workspace.getLookup().lookup(GraphModel.class);
                     Graph graph = null;
                     graph = graphModel.getGraphVisible();
@@ -129,17 +114,11 @@ public class SigmaExporter implements Exporter, LongTask {
                     int tasks = graph.getNodeCount() + graph.getEdgeCount();
                     Progress.start(progress, tasks);
 
-                    //FileWriter fwriter = new  FileWriter(writer);
-                    writer.write("{\"nodes\":[");
-
-
-                    //EdgeIterable eIt = graph.getEdges();
-                    //Export nodes. Progress is incremented at each step.
+                    HashSet<GraphElement> jNodes = new HashSet<GraphElement>();
                     Node[] nodeArray = graph.getNodes().toArray();
                     for (int i = 0; i < nodeArray.length; i++) {
-                        //NodeIterator nIt = graph.getNodes().iterator();
-                        //while (nIt.hasNext()) {
-                        Node n = nodeArray[i];//nIt.next();
+
+                        Node n = nodeArray[i];
                         NodeData nd = n.getNodeData();
                         String id = nd.getId();
                         String label = nd.getLabel();
@@ -148,18 +127,14 @@ public class SigmaExporter implements Exporter, LongTask {
                         float size = nd.getSize();
                         String color = "rgb(" + (int) (nd.r() * 255) + "," + (int) (nd.g() * 255) + "," + (int) (nd.b() * 255) + ")";
 
-                        StringBuilder sb = new StringBuilder();
-                        if (i != 0) {
-                            sb.append(",\n");//No comma after last one (nor before first one)
-                        }
-                        sb.append("{\"id\":\"" + id + "\", \"label\":\"" + label + "\",");
-                        sb.append("\"x\":" + x + ",\"y\":" + y + ",");
-                        sb.append("\"size\":" + size + ",\"color\":\"" + color + "\",\"attributes\":{");
+                        GraphNode jNode = new GraphNode(id);
+                        jNode.setLabel(label);
+                        jNode.setX(x);
+                        jNode.setY(y);
+                        jNode.setSize(size);
+                        jNode.setColor(color);
 
-
-                        //Map<String,String> attr = new  HashMap<String,String>();
                         AttributeRow nAttr = (AttributeRow) nd.getAttributes();
-                        boolean first = true;
                         for (int j = 0; j < nAttr.countValues(); j++) {
                             Object valObj = nAttr.getValue(j);
                             if (valObj == null) {
@@ -175,47 +150,51 @@ public class SigmaExporter implements Exporter, LongTask {
                                     || name.equalsIgnoreCase("uid")) {
                                 continue;
                             }
-                            // attr.put(name,val);
-                            if (first) {
-                                first = false;
-                            } else {
-                                sb.append(",");
-                            }
-                            sb.append("\"" + name + "\":\"" + val + "\"");
-                        }
-                        sb.append("}}");
+                            jNode.putAttribute(name, val);
 
-                        writer.write(sb.toString());
+                        }
+
+                        jNodes.add(jNode);
+
                         if (cancel) {
                             return false;
                         }
                         Progress.progress(progress);
                     }
-                    writer.write("],\"edges\":[");
+
 
                     //Export edges. Progress is incremented at each step.
+                    HashSet<GraphElement> jEdges = new HashSet<GraphElement>();
                     Edge[] edgeArray = graph.getEdges().toArray();
                     for (int i = 0; i < edgeArray.length; i++) {
-                        //EdgeIterator eIt = graph.getEdges().iterator();
-                        //while (eIt.hasNext()) {
-                        Edge e = edgeArray[i];//eIt.next();
+                        Edge e = edgeArray[i];
                         String sourceId = e.getSource().getNodeData().getId();
                         String targetId = e.getTarget().getNodeData().getId();
                         String weight = String.valueOf(e.getWeight());
-                        //e.getEdgeData().r();gb of edge data
-                        //Write to file
-                        if (i != 0) {
-                            writer.write(",\n");//No comma after last one
-                        }
-                        writer.write("{\"source\":\"" + sourceId + "\",\"target\":\"" + targetId + "\"");
-                        writer.write(",\"weight\":\"" + weight + "\"");
-                        writer.write(",\"id\":\"" + e.getId() + "\"}");
+
+                        GraphEdge jEdge = new GraphEdge(String.valueOf(e.getId()));
+                        jEdge.setSource(sourceId);
+                        jEdge.setTarget(targetId);
+                        jEdge.putAttribute("weight", weight);
+
+                        //TODO: Attributes of edge, including blended color!
+
+                        jEdges.add(jEdge);
+
                         if (cancel) {
                             return false;
                         }
                         Progress.progress(progress);
                     }
-                    writer.write("]}");
+
+
+                    writer = new FileWriter(pathFile.getAbsolutePath() + "/network/data.json");
+                    HashMap<String, HashSet<GraphElement>> json = new HashMap<String, HashSet<GraphElement>>();
+                    json.put("nodes", jNodes);
+                    json.put("edges", jEdges);
+                    
+                    gson.toJson(json, writer);
+                    
                 } catch (Exception e) {
                     e.printStackTrace();
                     new RuntimeException(e);
@@ -260,7 +239,7 @@ public class SigmaExporter implements Exporter, LongTask {
 
     public void setConfigFile(ConfigFile cfg, String path) {
         this.config = cfg;
-        this.path=path;
+        this.path = path;
     }
 
     @Override
