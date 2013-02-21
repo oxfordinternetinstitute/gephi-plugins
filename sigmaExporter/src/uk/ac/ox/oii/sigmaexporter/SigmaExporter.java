@@ -14,6 +14,7 @@
 package uk.ac.ox.oii.sigmaexporter;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -88,11 +89,12 @@ public class SigmaExporter implements Exporter, LongTask {
 
                 //Gson to handle JSON writing and escape
                 Gson gson = new Gson();
+                Gson gsonPretty = new GsonBuilder().setPrettyPrinting().create();
                     
                 //Write config.json
                 try {
                     writer = new FileWriter(pathFile.getAbsolutePath() + "/network/config.json");
-                    gson.toJson(config, writer);
+                    gsonPretty.toJson(config, writer);
                 } catch (Exception e) {
                     e.printStackTrace();
                     new RuntimeException(e);
@@ -170,12 +172,11 @@ public class SigmaExporter implements Exporter, LongTask {
                         Edge e = edgeArray[i];
                         String sourceId = e.getSource().getNodeData().getId();
                         String targetId = e.getTarget().getNodeData().getId();
-                        String weight = String.valueOf(e.getWeight());
 
                         GraphEdge jEdge = new GraphEdge(String.valueOf(e.getId()));
                         jEdge.setSource(sourceId);
                         jEdge.setTarget(targetId);
-                        jEdge.putAttribute("weight", weight);
+                        jEdge.setSize(e.getWeight());
 
                         //TODO: Attributes of edge, including blended color!
 

@@ -11,7 +11,6 @@ package uk.ac.ox.oii.sigmaexporter.model;
 public class GraphNode  extends GraphElement{
 	
 	private String label;
-	private double size;
 	private double x;
 	private double y;
 			
@@ -21,16 +20,6 @@ public class GraphNode  extends GraphElement{
 		size=1;
 		x = 100 - 200*Math.random();
 		y = 100 - 200*Math.random();
-	}
-	
-	
-
-	public double getSize() {
-		return size;
-	}
-
-	public void setSize(double size) {
-		this.size = size;
 	}
 
 	public double getX() {

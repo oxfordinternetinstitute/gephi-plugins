@@ -15,6 +15,7 @@ public class GraphElement {
 	private String id;
 	private HashMap<String,String> attributes;
         private String color;
+        protected double size;
 	
 	public GraphElement(String id) {
 		this.id=id;
@@ -49,6 +50,14 @@ public class GraphElement {
         public void setColor(String color) {
 		this.color = color;
 	}
+
+        public double getSize() {
+            return size;
+        }
+
+        public void setSize(double size) {
+            this.size = size;
+        }
 
 	
 }
