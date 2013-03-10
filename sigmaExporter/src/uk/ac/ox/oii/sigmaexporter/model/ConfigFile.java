@@ -152,8 +152,8 @@ public class ConfigFile implements Serializable{
         
         features.put("search",Boolean.valueOf(props.get("features.search","true")));
         
-        String hover = props.get("features.hoverBehavior","default");
-        if (hover.indexOf("None")!=-1) hover="default";
+        String hover = props.get("features.hoverBehavior","default").toLowerCase();
+        if (hover.indexOf("none")!=-1) hover="default";
         features.put("hoverBehavior",hover);
         
         String group = props.get("features.groupSelectAttribute",null);
