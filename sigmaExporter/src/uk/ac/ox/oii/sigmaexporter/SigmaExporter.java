@@ -231,9 +231,11 @@ public class SigmaExporter implements Exporter, LongTask {
         //Graph graph = graphModel.getGraphVisible();
         GraphModel graphModel = workspace.getLookup().lookup(GraphModel.class);
         Graph graph = graphModel.getGraphVisible();
-        AttributeRow ar = (AttributeRow) (graph.getNodes().toArray()[0].getNodeData().getAttributes());
-        for (AttributeValue av : ar.getValues()) {
-            attr.add(av.getColumn().getTitle());
+        if (graph.getNodeCount()>0) {
+            AttributeRow ar = (AttributeRow) (graph.getNodes().toArray()[0].getNodeData().getAttributes());
+            for (AttributeValue av : ar.getValues()) {
+                attr.add(av.getColumn().getTitle());
+            }
         }
         return attr;
     }
