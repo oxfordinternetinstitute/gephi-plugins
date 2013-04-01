@@ -16,27 +16,14 @@ package uk.ac.ox.oii.sigmaexporter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.io.Writer;
-import java.net.URI;
-import java.net.URL;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.BasicFileAttributes;
+import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import org.gephi.data.attributes.api.AttributeColumn;
 import org.gephi.data.attributes.api.AttributeRow;
 import org.gephi.data.attributes.api.AttributeValue;
@@ -45,8 +32,6 @@ import org.gephi.graph.api.Graph;
 import org.gephi.graph.api.GraphModel;
 import org.gephi.graph.api.Node;
 import org.gephi.graph.api.NodeData;
-import org.gephi.io.exporter.spi.ByteExporter;
-import org.gephi.io.exporter.spi.CharacterExporter;
 import org.gephi.io.exporter.spi.Exporter;
 import org.gephi.project.api.Workspace;
 import org.gephi.utils.longtask.spi.LongTask;
@@ -71,7 +56,10 @@ public class SigmaExporter implements Exporter, LongTask {
             final File pathFile = new File(path);
             if (pathFile.getParentFile().exists()) {
 
-                FileWriter writer = null;
+                
+                OutputStreamWriter writer = null;
+                FileOutputStream outStream = null;
+                final Charset utf8 = Charset.forName("UTF-8");
 
                 //Copy resource template
                 try {
@@ -93,7 +81,18 @@ public class SigmaExporter implements Exporter, LongTask {
                     
                 //Write config.json
                 try {
-                    writer = new FileWriter(pathFile.getAbsolutePath() + "/network/config.json");
+                    //FileWriter(Path...) constructor uses 'default encoding' on Mac this produces error
+                    
+                    //Really want to use jdk7 nio methods to force UTF-8
+                    //try (BufferedWriter writer = Files.newBufferedWriter(pathFile.getAbsolutePath() + "/network/config.json", charset)) {
+                    
+                    //Alternative for now with jdk6 is FileOutputStream wrapped in OutputStreamWriter)
+                    
+                    outStream = new FileOutputStream(pathFile.getAbsolutePath() + "/network/config.json");
+                    writer = new OutputStreamWriter(outStream,utf8);
+                    
+                    
+                    
                     gsonPretty.toJson(config, writer);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -102,6 +101,10 @@ public class SigmaExporter implements Exporter, LongTask {
                     if (writer != null) {
                         writer.close();
                         writer = null;
+                    }
+                    if (outStream != null) {
+                        outStream.close();
+                        outStream = null;
                     }
                 }
 
@@ -189,7 +192,9 @@ public class SigmaExporter implements Exporter, LongTask {
                     }
 
 
-                    writer = new FileWriter(pathFile.getAbsolutePath() + "/network/data.json");
+                    outStream = new FileOutputStream(pathFile.getAbsolutePath() + "/network/data.json");
+                    writer = new OutputStreamWriter(outStream,utf8);
+                    
                     HashMap<String, HashSet<GraphElement>> json = new HashMap<String, HashSet<GraphElement>>();
                     json.put("nodes", jNodes);
                     json.put("edges", jEdges);
@@ -203,6 +208,10 @@ public class SigmaExporter implements Exporter, LongTask {
                     if (writer != null) {
                         writer.close();
                         writer = null;
+                    }
+                    if (outStream != null) {
+                        outStream.close();
+                        outStream = null;
                     }
                 }
 
