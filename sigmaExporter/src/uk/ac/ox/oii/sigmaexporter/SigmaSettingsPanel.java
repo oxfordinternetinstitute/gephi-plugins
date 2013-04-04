@@ -132,17 +132,20 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
         txtLogo.setText(prefs.get("logo.file", ""));        
         txtLink.setText(prefs.get("logo.link", ""));        
         txtAuthor.setText(prefs.get("logo.author", ""));
+        cbRenumber.setSelected(Boolean.valueOf(prefs.get("renumber","true")));
     }
 
     public void unsetup(boolean update) {
         //HashMap<String,String> props = new HashMap<String,String>();
         Preferences props = NbPreferences.forModule(SigmaSettingsPanel.class);
         String path="";
+        boolean renumber = false;
         if (update) {
             try {
                 path = pathTextField.getText();
+                renumber = cbRenumber.isSelected();
                 props.put("path",path);
-                
+                props.put("renumber", String.valueOf(renumber));
                 props.put("legend.node",txtNode.getText());
                 props.put("legend.edge",txtEdge.getText());
                 props.put("legend.color",txtColor.getText());
@@ -159,10 +162,11 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
                 props.put("logo.author",txtAuthor.getText());
                 
             } catch (Exception e) {
+                e.printStackTrace();
             }
             ConfigFile cfg = new ConfigFile();
             cfg.readFromPrefs(props);
-            exporter.setConfigFile(cfg,path);
+            exporter.setConfigFile(cfg,path,renumber);
         }
     }
 
@@ -213,6 +217,7 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
         jLabel16 = new javax.swing.JLabel();
         txtTitle = new javax.swing.JTextField();
         jLabel17 = new javax.swing.JLabel();
+        cbRenumber = new javax.swing.JCheckBox();
 
         jLabel1.setFont(jLabel1.getFont().deriveFont(jLabel1.getFont().getStyle() | java.awt.Font.BOLD, jLabel1.getFont().getSize()+3));
         jLabel1.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jLabel1.text")); // NOI18N
@@ -321,6 +326,10 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
 
         jLabel17.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.jLabel17.text")); // NOI18N
 
+        cbRenumber.setSelected(true);
+        cbRenumber.setText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.cbRenumber.text")); // NOI18N
+        cbRenumber.setToolTipText(org.openide.util.NbBundle.getMessage(SigmaSettingsPanel.class, "SigmaSettingsPanel.cbRenumber.toolTipText")); // NOI18N
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
@@ -328,16 +337,6 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
             .addGroup(layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jScrollPane3, javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                                .addComponent(pathTextField)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(browseButton))
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(jLabel1)
-                                .addGap(0, 0, Short.MAX_VALUE))))
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(attributesScrollPanel, javax.swing.GroupLayout.PREFERRED_SIZE, 256, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -381,7 +380,7 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
                                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                         .addComponent(txtTitle, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addComponent(txtAuthor, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 59, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jLabel6)
                             .addGroup(layout.createSequentialGroup()
@@ -402,12 +401,21 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
                                     .addComponent(ddHover, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addComponent(ddGroupSelector, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addComponent(ddImageAttribute, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                        .addGap(97, 97, 97)))
+                        .addGap(97, 97, 97))
+                    .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                .addComponent(pathTextField)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(browseButton))
+                            .addGroup(layout.createSequentialGroup()
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(jLabel1)
+                                    .addComponent(jLabel13)
+                                    .addComponent(cbRenumber))
+                                .addGap(0, 0, Short.MAX_VALUE)))))
                 .addContainerGap())
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel13)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -487,7 +495,9 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
                 .addComponent(jLabel13, javax.swing.GroupLayout.PREFERRED_SIZE, 17, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(5, 5, 5)
                 .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 139, Short.MAX_VALUE)
-                .addGap(37, 37, 37))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(cbRenumber)
+                .addGap(7, 7, 7))
         );
     }// </editor-fold>//GEN-END:initComponents
 
@@ -504,6 +514,7 @@ public class SigmaSettingsPanel extends javax.swing.JPanel {
     private javax.swing.JScrollPane attributesScrollPanel;
     private javax.swing.JButton browseButton;
     private javax.swing.JCheckBox cbGroupEdges;
+    private javax.swing.JCheckBox cbRenumber;
     private javax.swing.JCheckBox cbSearch;
     private javax.swing.JComboBox ddGroupSelector;
     private javax.swing.JComboBox ddHover;

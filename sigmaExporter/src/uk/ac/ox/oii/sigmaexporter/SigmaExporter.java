@@ -1,5 +1,5 @@
 /*
- Copyright Scott Hale, 2012
+ Copyright Scott A. Hale, 2012
  * 
  
  Base on code from 
@@ -46,6 +46,7 @@ public class SigmaExporter implements Exporter, LongTask {
 
     private ConfigFile config;
     private String path;
+    private boolean renumber;
     private Workspace workspace;
     private ProgressTicket progress;
     private boolean cancel = false;
@@ -96,7 +97,7 @@ public class SigmaExporter implements Exporter, LongTask {
                     gsonPretty.toJson(config, writer);
                 } catch (Exception e) {
                     e.printStackTrace();
-                    new RuntimeException(e);
+                    throw new RuntimeException(e);
                 } finally {
                     if (writer != null) {
                         writer.close();
@@ -109,6 +110,8 @@ public class SigmaExporter implements Exporter, LongTask {
                 }
 
 
+                HashMap<String,String> nodeIdMap = new HashMap<String,String>();
+                int nodeId=0;
                 //Write data.json
                 try {
                     GraphModel graphModel = workspace.getLookup().lookup(GraphModel.class);
@@ -132,6 +135,13 @@ public class SigmaExporter implements Exporter, LongTask {
                         float size = nd.getSize();
                         String color = "rgb(" + (int) (nd.r() * 255) + "," + (int) (nd.g() * 255) + "," + (int) (nd.b() * 255) + ")";
 
+                        if (renumber) {
+                           String newId=String.valueOf(nodeId);
+                           nodeIdMap.put(id,newId); 
+                           id=newId;
+                           nodeId++;
+                        }
+                        
                         GraphNode jNode = new GraphNode(id);
                         jNode.setLabel(label);
                         jNode.setX(x);
@@ -175,6 +185,12 @@ public class SigmaExporter implements Exporter, LongTask {
                         Edge e = edgeArray[i];
                         String sourceId = e.getSource().getNodeData().getId();
                         String targetId = e.getTarget().getNodeData().getId();
+                        
+                        if (renumber) {
+                            sourceId = nodeIdMap.get(sourceId);
+                            targetId = nodeIdMap.get(targetId);
+                        }
+                        
 
                         GraphEdge jEdge = new GraphEdge(String.valueOf(e.getId()));
                         jEdge.setSource(sourceId);
@@ -249,9 +265,10 @@ public class SigmaExporter implements Exporter, LongTask {
         return attr;
     }
 
-    public void setConfigFile(ConfigFile cfg, String path) {
+    public void setConfigFile(ConfigFile cfg, String path, boolean renumber) {
         this.config = cfg;
         this.path = path;
+        this.renumber = renumber;
     }
 
     @Override
@@ -273,5 +290,5 @@ public class SigmaExporter implements Exporter, LongTask {
     @Override
     public void setProgressTicket(ProgressTicket pt) {
         this.progress = pt;
-    }
+    }   
 }
