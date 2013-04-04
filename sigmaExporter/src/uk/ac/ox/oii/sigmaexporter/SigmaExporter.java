@@ -54,7 +54,7 @@ public class SigmaExporter implements Exporter, LongTask {
     public boolean execute() {
         try {
             final File pathFile = new File(path);
-            if (pathFile.getParentFile().exists()) {
+            if (pathFile.exists()) {
 
                 
                 OutputStreamWriter writer = null;
@@ -220,7 +220,7 @@ public class SigmaExporter implements Exporter, LongTask {
                 Progress.finish(progress);
                 return true;
             } else {
-                throw new Exception("Invalid or null settings.");
+                throw new Exception("Invalid path. Please make sure the specified directory exists. The network will be exported into a new 'network' directory in this directory.");
             }
         } catch (Exception e) {
             e.printStackTrace();
