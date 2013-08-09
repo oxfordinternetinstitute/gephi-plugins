@@ -74,7 +74,7 @@ public class JSONExporter implements GraphExporter, LongTask, CharacterExporter 
                 //FileWriter fwriter = new  FileWriter(writer);
 
                 Gson gson = new Gson();
-                //EdgeColor colorMixer = new EdgeColor(EdgeColor.Mode.MIXED);
+                EdgeColor colorMixer = new EdgeColor(EdgeColor.Mode.MIXED);
 
                 //HashMap<String, String> nodeIdMap = new HashMap<String, String>();
                 //int nodeId = 0;
@@ -158,9 +158,52 @@ public class JSONExporter implements GraphExporter, LongTask, CharacterExporter 
                     jEdge.setTarget(targetId);
                     jEdge.setSize(e.getWeight());
 
-                    //EdgeData ed = e.getEdgeData();
-                    String color = "";
-                    jEdge.setColor(color);
+                    EdgeData ed = e.getEdgeData();
+                    
+                    String color="";
+                    if (ed!=null) {
+                        float r=ed.r();
+                        float g=ed.g();
+                        float b=ed.b();
+
+                        if (r==-1 || g==-1 || b==-1) {
+                            //Mix colors
+
+                            //Source
+                            NodeData nd = e.getSource().getNodeData();
+                            Color source = new Color(nd.r(),nd.g(),nd.b());
+                            nd = e.getTarget().getNodeData();
+                            Color target = new Color(nd.r(),nd.g(),nd.b());
+                            Color result = colorMixer.getColor(null, source, target);
+                            color = "rgb(" + result.getRed() + "," + result.getGreen() + "," + result.getBlue() + ")";
+
+                        } else {
+                            color = "rgb(" + (int) (r* 255) + "," + (int) (g* 255) + "," + (int) (b* 255) + ")";
+                        }
+
+                        jEdge.setColor(color);
+
+                        AttributeRow eAttr = (AttributeRow) ed.getAttributes();
+                        if (eAttr!=null) {
+                            for (int j = 0; j < eAttr.countValues(); j++) {
+                                Object valObj = eAttr.getValue(j);
+                                if (valObj == null) {
+                                    continue;
+                                }
+                                String val = valObj.toString();
+                                AttributeColumn col = eAttr.getColumnAt(j);
+                                if (col == null) {
+                                    continue;
+                                }
+                                String name = col.getTitle();
+                                if (name.equalsIgnoreCase("Id") || name.equalsIgnoreCase("Label")
+                                        || name.equalsIgnoreCase("uid")) {
+                                    continue;
+                                }
+                                jEdge.putAttribute(name, val);
+                            }
+                        }
+                    }
 
                     jEdges.add(jEdge);
 
