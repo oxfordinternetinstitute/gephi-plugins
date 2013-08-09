@@ -15,6 +15,7 @@ package uk.ac.ox.oii.sigmaexporter;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import java.awt.Color;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -28,11 +29,13 @@ import org.gephi.data.attributes.api.AttributeColumn;
 import org.gephi.data.attributes.api.AttributeRow;
 import org.gephi.data.attributes.api.AttributeValue;
 import org.gephi.graph.api.Edge;
+import org.gephi.graph.api.EdgeData;
 import org.gephi.graph.api.Graph;
 import org.gephi.graph.api.GraphModel;
 import org.gephi.graph.api.Node;
 import org.gephi.graph.api.NodeData;
 import org.gephi.io.exporter.spi.Exporter;
+import org.gephi.preview.types.EdgeColor;
 import org.gephi.project.api.Workspace;
 import org.gephi.utils.longtask.spi.LongTask;
 import org.gephi.utils.progress.Progress;
@@ -112,6 +115,7 @@ public class SigmaExporter implements Exporter, LongTask {
 
                 HashMap<String,String> nodeIdMap = new HashMap<String,String>();
                 int nodeId=0;
+                EdgeColor colorMixer = new EdgeColor(EdgeColor.Mode.MIXED);
                 //Write data.json
                 try {
                     GraphModel graphModel = workspace.getLookup().lookup(GraphModel.class);
@@ -192,12 +196,36 @@ public class SigmaExporter implements Exporter, LongTask {
                         }
                         
 
+                        //GraphEdge jEdge = new GraphEdge();
                         GraphEdge jEdge = new GraphEdge(String.valueOf(e.getId()));
                         jEdge.setSource(sourceId);
                         jEdge.setTarget(targetId);
                         jEdge.setSize(e.getWeight());
+                        
+                        EdgeData ed = e.getEdgeData();
+                        String color="";
+                        if (ed!=null) {
+                            float r=ed.r();
+                            float g=ed.g();
+                            float b=ed.b();
 
-                        //TODO: Attributes of edge, including blended color!
+                            if (r==-1 || g==-1 || b==-1) {
+                                //Mix colors
+                                
+                                //Source
+                                NodeData nd = e.getSource().getNodeData();
+                                Color source = new Color(nd.r(),nd.g(),nd.b());
+                                nd = e.getTarget().getNodeData();
+                                Color target = new Color(nd.r(),nd.g(),nd.b());
+                                Color result = colorMixer.getColor(null, source, target);
+                                color = "rgb(" + result.getRed() + "," + result.getGreen() + "," + result.getBlue() + ")";
+                                
+                            } else {
+                                color = "rgb(" + (int) (r* 255) + "," + (int) (g* 255) + "," + (int) (b* 255) + ")";
+                            }
+                            
+                            jEdge.setColor(color);
+                        }                        
 
                         jEdges.add(jEdge);
 
@@ -239,7 +267,7 @@ public class SigmaExporter implements Exporter, LongTask {
                 throw new Exception("Invalid path. Please make sure the specified directory exists. The network will be exported into a new 'network' directory in this directory.");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            //e.printStackTrace();
             throw new RuntimeException(e);
         }
     }

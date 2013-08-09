@@ -10,10 +10,12 @@ public class GraphEdge extends GraphElement{
 	private String label;
 	private String source;
 	private String target;
+        private String id;
 	
 	public GraphEdge(String id) {
-		super(id);
-		label=id;
+		super();
+                this.id=id;
+		label="";
 		source="";
 		target="";
 	}
@@ -41,9 +43,5 @@ public class GraphEdge extends GraphElement{
 	public void setTarget(String target) {
 		this.target = target;
 	}
-	
-	
-	
-	
 
 }
