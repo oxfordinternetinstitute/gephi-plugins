@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package uk.ac.ox.oii.sigmaexporter.model;
+package uk.ac.ox.oii.jsonexporter.model;
 
 /**
  *
@@ -13,9 +13,11 @@ public class GraphNode  extends GraphElement{
 	private String label;
 	private double x;
 	private double y;
+        private String id;
 			
 	public GraphNode(String id) {
-		super(id);
+		super();
+                this.id=id;
 		label="";
 		size=1;
 		x = 100 - 200*Math.random();
@@ -45,6 +47,14 @@ public class GraphNode  extends GraphElement{
 	public void setLabel(String label) {
 		this.label = label;
 	}
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
 	
 	
 

@@ -1,46 +1,46 @@
 /*
-Copyright (C) 2012  Scott A. Hale
-Website: http://www.scotthale.net/
+ Copyright (C) 2012  Scott A. Hale
+ Website: http://www.scotthale.net/
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/license
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/license
  */
 package uk.ac.ox.oii.jsonexporter;
 
+import com.google.gson.Gson;
+import java.awt.Color;
+import java.io.FileNotFoundException;
 import java.io.Writer;
-import org.gephi.graph.api.Attributes;
-import org.gephi.graph.api.EdgeIterable;
-import org.gephi.graph.api.EdgeIterator;
-import org.gephi.io.exporter.spi.CharacterExporter;
-import org.gephi.io.exporter.spi.GraphExporter;
-import org.gephi.project.api.Workspace;
+import java.util.HashMap;
+import java.util.HashSet;
+import org.gephi.data.attributes.api.AttributeColumn;
+import org.gephi.data.attributes.api.AttributeRow;
+import org.gephi.graph.api.Edge;
+import org.gephi.graph.api.EdgeData;
 import org.gephi.graph.api.Graph;
 import org.gephi.graph.api.GraphModel;
+import org.gephi.graph.api.Node;
+import org.gephi.graph.api.NodeData;
+import org.gephi.io.exporter.spi.CharacterExporter;
+import org.gephi.io.exporter.spi.GraphExporter;
+import org.gephi.preview.types.EdgeColor;
+import org.gephi.project.api.Workspace;
 import org.gephi.utils.longtask.spi.LongTask;
 import org.gephi.utils.progress.Progress;
 import org.gephi.utils.progress.ProgressTicket;
-import org.gephi.graph.api.Edge;
-import org.gephi.graph.api.Node;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.util.HashMap;
-import java.util.Map;
-import org.gephi.data.attributes.api.AttributeColumn;
-import org.gephi.data.attributes.api.AttributeRow;
-import org.gephi.data.attributes.api.AttributeValue;
-import org.gephi.graph.api.NodeData;
-import org.gephi.graph.api.NodeIterable;
-import org.gephi.graph.api.NodeIterator;
+import uk.ac.ox.oii.jsonexporter.model.GraphEdge;
+import uk.ac.ox.oii.jsonexporter.model.GraphElement;
+import uk.ac.ox.oii.jsonexporter.model.GraphNode;
 
 /**
  *
@@ -72,16 +72,22 @@ public class JSONExporter implements GraphExporter, LongTask, CharacterExporter 
                 Progress.start(progress, tasks);
 
                 //FileWriter fwriter = new  FileWriter(writer);
-                writer.write("{\"nodes\":[");
+
+                Gson gson = new Gson();
+                //EdgeColor colorMixer = new EdgeColor(EdgeColor.Mode.MIXED);
+
+                //HashMap<String, String> nodeIdMap = new HashMap<String, String>();
+                //int nodeId = 0;
+                //EdgeColor colorMixer = new EdgeColor(EdgeColor.Mode.MIXED);
+                //Write data.json
 
 
-                //EdgeIterable eIt = graph.getEdges();
-                //Export nodes. Progress is incremented at each step.
+
+                HashSet<GraphElement> jNodes = new HashSet<GraphElement>();
                 Node[] nodeArray = graph.getNodes().toArray();
                 for (int i = 0; i < nodeArray.length; i++) {
-                    //NodeIterator nIt = graph.getNodes().iterator();
-                    //while (nIt.hasNext()) {
-                    Node n = nodeArray[i];//nIt.next();
+
+                    Node n = nodeArray[i];
                     NodeData nd = n.getNodeData();
                     String id = nd.getId();
                     String label = nd.getLabel();
@@ -90,18 +96,21 @@ public class JSONExporter implements GraphExporter, LongTask, CharacterExporter 
                     float size = nd.getSize();
                     String color = "rgb(" + (int) (nd.r() * 255) + "," + (int) (nd.g() * 255) + "," + (int) (nd.b() * 255) + ")";
 
-                    StringBuilder sb = new StringBuilder();
-                    if (i != 0) {
-                        sb.append(",\n");//No comma after last one (nor before first one)
-                    }
-                    sb.append("{\"id\":\"" + id + "\", \"label\":\"" + label + "\",");
-                    sb.append("\"x\":" + x + ",\"y\":" + y + ",");
-                    sb.append("\"size\":" + size + ",\"color\":\"" + color + "\",\"attributes\":{");
+                    /*if (renumber) {
+                     String newId=String.valueOf(nodeId);
+                     nodeIdMap.put(id,newId); 
+                     id=newId;
+                     nodeId++;
+                     }*/
 
+                    GraphNode jNode = new GraphNode(id);
+                    jNode.setLabel(label);
+                    jNode.setX(x);
+                    jNode.setY(y);
+                    jNode.setSize(size);
+                    jNode.setColor(color);
 
-                    //Map<String,String> attr = new  HashMap<String,String>();
                     AttributeRow nAttr = (AttributeRow) nd.getAttributes();
-                    boolean first = true;
                     for (int j = 0; j < nAttr.countValues(); j++) {
                         Object valObj = nAttr.getValue(j);
                         if (valObj == null) {
@@ -117,47 +126,56 @@ public class JSONExporter implements GraphExporter, LongTask, CharacterExporter 
                                 || name.equalsIgnoreCase("uid")) {
                             continue;
                         }
-                        // attr.put(name,val);
-                        if (first) {
-                            first = false;
-                        } else {
-                            sb.append(",");
-                        }
-                        sb.append("\"" + name + "\":\"" + val + "\"");
-                    }
-                    sb.append("}}");
+                        jNode.putAttribute(name, val);
 
-                    writer.write(sb.toString());
+                    }
+
+                    jNodes.add(jNode);
+
                     if (cancel) {
                         return false;
                     }
                     Progress.progress(progress);
                 }
-                writer.write("],\"edges\":[");
+
 
                 //Export edges. Progress is incremented at each step.
+                HashSet<GraphElement> jEdges = new HashSet<GraphElement>();
                 Edge[] edgeArray = graph.getEdges().toArray();
                 for (int i = 0; i < edgeArray.length; i++) {
-                    //EdgeIterator eIt = graph.getEdges().iterator();
-                    //while (eIt.hasNext()) {
-                    Edge e = edgeArray[i];//eIt.next();
+                    Edge e = edgeArray[i];
                     String sourceId = e.getSource().getNodeData().getId();
                     String targetId = e.getTarget().getNodeData().getId();
-                    String weight = String.valueOf(e.getWeight());
-                    //e.getEdgeData().r();gb of edge data
-                    //Write to file
-                    if (i != 0) {
-                        writer.write(",\n");//No comma after last one
-                    }
-                    writer.write("{\"source\":\"" + sourceId + "\",\"target\":\"" + targetId + "\"");
-                    writer.write(",\"weight\":\"" + weight + "\"");
-                    writer.write(",\"id\":\"" + e.getId() + "\"}");
+
+                    /*if (renumber) {
+                     sourceId = nodeIdMap.get(sourceId);
+                     targetId = nodeIdMap.get(targetId);
+                     }*/
+
+
+                    GraphEdge jEdge = new GraphEdge(String.valueOf(e.getId()));
+                    jEdge.setSource(sourceId);
+                    jEdge.setTarget(targetId);
+                    jEdge.setSize(e.getWeight());
+
+                    //EdgeData ed = e.getEdgeData();
+                    String color = "";
+                    jEdge.setColor(color);
+
+                    jEdges.add(jEdge);
+
                     if (cancel) {
                         return false;
                     }
                     Progress.progress(progress);
                 }
-                writer.write("]}");
+
+
+                HashMap<String, HashSet<GraphElement>> json = new HashMap<String, HashSet<GraphElement>>();
+                json.put("nodes", jNodes);
+                json.put("edges", jEdges);
+
+                gson.toJson(json, writer);
 
                 //Finish progress
                 Progress.finish(progress);
@@ -170,23 +188,23 @@ public class JSONExporter implements GraphExporter, LongTask, CharacterExporter 
             throw new RuntimeException(e);
         } finally {
             /*try {
-            /if (writer != null) {
-            writer.close();
-            }
-            } catch (java.io.IOException e) {
-            // failed to close file
-            System.err.println(e);
-            }*/
+             /if (writer != null) {
+             writer.close();
+             }
+             } catch (java.io.IOException e) {
+             // failed to close file
+             System.err.println(e);
+             }*/
         }
     }
 
     /*     public File getPath() {
-    return path;
-    }
+     return path;
+     }
     
-    public void setPath(File path) {
-    this.path = path;
-    }*/
+     public void setPath(File path) {
+     this.path = path;
+     }*/
     @Override
     public void setWorkspace(Workspace workspace) {
         this.workspace = workspace;

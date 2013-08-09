@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package uk.ac.ox.oii.sigmaexporter.model;
+package uk.ac.ox.oii.jsonexporter.model;
 
 import java.util.HashMap;
 
@@ -11,28 +11,17 @@ import java.util.HashMap;
  * @author shale
  */
 public class GraphElement {
-	
-	private String id;
 	private HashMap<String,String> attributes;
         private String color;
         protected double size;
 	
-	public GraphElement(String id) {
-		this.id=id;
+	public GraphElement() {
 		attributes=new HashMap<String,String>();
                 color="";
 	}
 	
 	public void putAttribute(String key, String value) {
 		attributes.put(key, value);
-	}
-
-	public String getId() {
-		return id;
-	}
-
-	public void setId(String id) {
-		this.id = id;
 	}
 
 	public HashMap<String, String> getAttributes() {
