@@ -159,29 +159,21 @@ public class JSONExporter implements GraphExporter, LongTask, CharacterExporter 
                     jEdge.setSize(e.getWeight());
 
                     EdgeData ed = e.getEdgeData();
-                    
+                    boolean mixColors=false;
                     String color="";
                     if (ed!=null) {
+                        jEdge.setLabel(ed.getLabel());
+                        
                         float r=ed.r();
                         float g=ed.g();
                         float b=ed.b();
 
                         if (r==-1 || g==-1 || b==-1) {
                             //Mix colors
-
-                            //Source
-                            NodeData nd = e.getSource().getNodeData();
-                            Color source = new Color(nd.r(),nd.g(),nd.b());
-                            nd = e.getTarget().getNodeData();
-                            Color target = new Color(nd.r(),nd.g(),nd.b());
-                            Color result = colorMixer.getColor(null, source, target);
-                            color = "rgb(" + result.getRed() + "," + result.getGreen() + "," + result.getBlue() + ")";
-
+                            mixColors=true;
                         } else {
                             color = "rgb(" + (int) (r* 255) + "," + (int) (g* 255) + "," + (int) (b* 255) + ")";
                         }
-
-                        jEdge.setColor(color);
 
                         AttributeRow eAttr = (AttributeRow) ed.getAttributes();
                         if (eAttr!=null) {
@@ -204,6 +196,17 @@ public class JSONExporter implements GraphExporter, LongTask, CharacterExporter 
                             }
                         }
                     }
+                    
+                    if (mixColors) {
+                        //Source
+                        NodeData nd = e.getSource().getNodeData();
+                        Color source = new Color(nd.r(),nd.g(),nd.b());
+                        nd = e.getTarget().getNodeData();
+                        Color target = new Color(nd.r(),nd.g(),nd.b());
+                        Color result = colorMixer.getColor(null, source, target);
+                        color = "rgb(" + result.getRed() + "," + result.getGreen() + "," + result.getBlue() + ")";
+                    }
+                    jEdge.setColor(color);
 
                     jEdges.add(jEdge);
 

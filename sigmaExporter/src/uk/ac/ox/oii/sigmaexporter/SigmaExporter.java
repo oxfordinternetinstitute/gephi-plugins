@@ -203,6 +203,7 @@ public class SigmaExporter implements Exporter, LongTask {
                         jEdge.setSize(e.getWeight());
                         
                         EdgeData ed = e.getEdgeData();
+                        boolean mixColors=false;
                         String color="";
                         if (ed!=null) {
                             float r=ed.r();
@@ -210,22 +211,23 @@ public class SigmaExporter implements Exporter, LongTask {
                             float b=ed.b();
 
                             if (r==-1 || g==-1 || b==-1) {
-                                //Mix colors
-                                
-                                //Source
-                                NodeData nd = e.getSource().getNodeData();
-                                Color source = new Color(nd.r(),nd.g(),nd.b());
-                                nd = e.getTarget().getNodeData();
-                                Color target = new Color(nd.r(),nd.g(),nd.b());
-                                Color result = colorMixer.getColor(null, source, target);
-                                color = "rgb(" + result.getRed() + "," + result.getGreen() + "," + result.getBlue() + ")";
-                                
+                                mixColors=true;//We'll mix colors
                             } else {
                                 color = "rgb(" + (int) (r* 255) + "," + (int) (g* 255) + "," + (int) (b* 255) + ")";
                             }
-                            
-                            jEdge.setColor(color);
-                        }                        
+                        }
+                        
+                        if (mixColors) {
+                            //Source
+                            NodeData nd = e.getSource().getNodeData();
+                            Color source = new Color(nd.r(),nd.g(),nd.b());
+                            //Target
+                            nd = e.getTarget().getNodeData();
+                            Color target = new Color(nd.r(),nd.g(),nd.b());
+                            Color result = colorMixer.getColor(null, source, target);
+                            color = "rgb(" + result.getRed() + "," + result.getGreen() + "," + result.getBlue() + ")";
+                        }
+                        jEdge.setColor(color);
 
                         jEdges.add(jEdge);
 
