@@ -144,7 +144,7 @@ function setupGUI(config) {
 		$("#information").html(config.text.more);
 	} else {
 		//hide more information link
-		$("#moreinformation").hide();
+		$(".info").hide();
 	}
 
 	// Legend
